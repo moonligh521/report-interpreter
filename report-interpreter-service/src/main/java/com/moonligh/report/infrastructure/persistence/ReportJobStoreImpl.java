@@ -29,4 +29,14 @@ public class ReportJobStoreImpl implements ReportJobStore {
     public Optional<ReportJobRow> findByIdempotency(String accountId, String idempotencyKey) {
         return Optional.ofNullable(mapper.findByIdempotency(accountId, idempotencyKey));
     }
+
+    @Override
+    public Optional<ReportJobRow> lockById(String reportId) {
+        return Optional.ofNullable(mapper.lockById(reportId));
+    }
+
+    @Override
+    public void updateStatus(String reportId, String status) {
+        mapper.updateStatus(reportId, status);
+    }
 }

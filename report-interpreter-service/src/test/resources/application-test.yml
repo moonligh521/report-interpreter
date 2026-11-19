@@ -29,6 +29,8 @@ consult:
 
 report:
   display-name: report-interpreter-test
+  parse:
+    allow-text-fixture: true
 
 management:
   endpoints:

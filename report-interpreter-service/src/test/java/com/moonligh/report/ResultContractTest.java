@@ -32,7 +32,7 @@ class ResultContractTest {
     @Test
     void createResponseIsTypedResultWithCode200() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", new byte[] {1, 2, 3});
+                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
         MvcResult result = mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p-contract")
@@ -50,7 +50,7 @@ class ResultContractTest {
         JsonNode data = root.get("data");
         // 禁止把业务字段塞进自由 Map 扩展键；契约字段固定。
         data.fieldNames().forEachRemaining(name -> {
-            if (!name.equals("reportId") && !name.equals("status")) {
+            if (!name.equals("reportId") && !name.equals("status") && !name.equals("parseVersion")) {
                 throw new AssertionError("unexpected field: " + name);
             }
         });
@@ -59,7 +59,7 @@ class ResultContractTest {
     @Test
     void getDetailReturnsTypedShape() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", new byte[] {1, 2, 3});
+                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
         MvcResult created = mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p-get")

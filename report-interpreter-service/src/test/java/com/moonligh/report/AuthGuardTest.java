@@ -26,7 +26,7 @@ class AuthGuardTest {
     @Test
     void rejectWriteWithoutIdentity() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", new byte[] {1, 2, 3});
+                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
         mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p1")
@@ -38,7 +38,7 @@ class AuthGuardTest {
     @Test
     void acceptWriteWithAccountHeader() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", new byte[] {1, 2, 3});
+                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
         mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p1")

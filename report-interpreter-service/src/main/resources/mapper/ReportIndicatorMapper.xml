@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportIndicatorMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO report_indicator
+        (id, parse_result_id, report_id, parse_version,
+         raw_name, raw_value, raw_unit, canonical_code, specimen_type,
+         normalized_value, normalized_unit, normalization_status, ref_low, ref_high,
+         conf_ocr, conf_structure, conf_extraction, conf_normalization,
+         conf_name, conf_value, conf_unit, conf_ref_range)
+        VALUES
+        <foreach collection="rows" item="r" separator=",">
+            (#{r.id}, #{r.parseResultId}, #{r.reportId}, #{r.parseVersion},
+             #{r.rawName}, #{r.rawValue}, #{r.rawUnit}, #{r.canonicalCode}, #{r.specimenType},
+             #{r.normalizedValue}, #{r.normalizedUnit}, #{r.normalizationStatus}, #{r.refLow}, #{r.refHigh},
+             #{r.confOcr}, #{r.confStructure}, #{r.confExtraction}, #{r.confNormalization},
+             #{r.confName}, #{r.confValue}, #{r.confUnit}, #{r.confRefRange})
+        </foreach>
+    </insert>
+
+    <select id="listByParseResult" resultType="com.moonligh.report.infrastructure.persistence.ReportIndicatorRow">
+        SELECT id, parse_result_id AS parseResultId, report_id AS reportId, parse_version AS parseVersion,
+               raw_name AS rawName, raw_value AS rawValue, raw_unit AS rawUnit,
+               canonical_code AS canonicalCode, specimen_type AS specimenType,
+               normalized_value AS normalizedValue, normalized_unit AS normalizedUnit,
+               normalization_status AS normalizationStatus, ref_low AS refLow, ref_high AS refHigh,
+               conf_ocr AS confOcr, conf_structure AS confStructure,
+               conf_extraction AS confExtraction, conf_normalization AS confNormalization,
+               conf_name AS confName, conf_value AS confValue, conf_unit AS confUnit,
+               conf_ref_range AS confRefRange
+        FROM report_indicator WHERE parse_result_id = #{parseResultId} ORDER BY id ASC
+    </select>
+
+</mapper>

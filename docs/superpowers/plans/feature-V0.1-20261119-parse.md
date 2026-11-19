@@ -139,4 +139,14 @@ SPI：`ReportParser#supports` / `#parse(ParseContext): ParseResult` — 强类�
 
 ## 7. 完成定义
 
-- [ ] SDD；TDD+AC；合入版本开发分支  
+- [x] SDD  
+- [x] TDD+AC（`mvn -B verify` 通过，44 个测试全绿）  
+- [ ] 合入版本开发分支（待评审合并）  
+
+### 实现说明与遗留
+
+- AC-P1～P10 对应测试：`LabParserGoldenTest`、`SourceEvidenceTest`、`IdempotencyTest`、`ReportTypeRejectTest`、`NoDualEngineTest`、`FileSecurityTest`、`ParseVersionTest`、`RawNormalizedTest`、`NoMapContractTest`、`IndicatorMapperXmlTest`。  
+- P0 未接真实 OCR：解析仅覆盖文本金标夹具（`text/plain` / `.lab.txt`，由 `report.parse.allow-text-fixture` 控制，生产默认 false）；合法 PDF/图片仅建单，状态 `CREATED`、`parseVersion=0`。  
+- 重解析使用建单时保存的 `source_text`（仅夹具场景），重解析以 `Idempotency-Key` 回放。  
+- 生产 MySQL DDL 尚未入库（仓内仅有 `schema-test.sql`），需随 delivery-gate 补充。  
+- 未做超页数（P-R2 页数部分）校验，待真实 OCR/PDF 解析接入。  

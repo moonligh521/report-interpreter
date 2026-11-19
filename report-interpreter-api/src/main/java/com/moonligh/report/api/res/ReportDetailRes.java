@@ -1,12 +1,16 @@
 package com.moonligh.report.api.res;
 
+import java.util.List;
+
 /**
- * 报告详情最小集（foundation 占位，后续分支扩展字段）。
+ * 报告详情：当前 active 解析版本及其指标。
  */
 public record ReportDetailRes(
         String reportId,
         String reportType,
         String status,
         int parseVersion,
-        boolean activeParse) {
+        boolean activeParse,
+        double parseConfidence,
+        List<IndicatorDto> indicators) {
 }
