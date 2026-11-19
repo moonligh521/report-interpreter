@@ -12,6 +12,7 @@
         report_type AS reportType,
         request_hash AS requestHash,
         source_text AS sourceText,
+        expected_patient_name AS expectedPatientName,
         created_at AS createdAt,
         updated_at AS updatedAt
     </sql>
@@ -19,10 +20,10 @@
     <insert id="insert">
         INSERT INTO report_job
         (report_id, account_id, patient_id, idempotency_key, status, epoch,
-         report_type, request_hash, source_text, created_at, updated_at)
+         report_type, request_hash, source_text, expected_patient_name, created_at, updated_at)
         VALUES
         (#{reportId}, #{accountId}, #{patientId}, #{idempotencyKey}, #{status}, #{epoch},
-         #{reportType}, #{requestHash}, #{sourceText},
+         #{reportType}, #{requestHash}, #{sourceText}, #{expectedPatientName},
          CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     </insert>
 

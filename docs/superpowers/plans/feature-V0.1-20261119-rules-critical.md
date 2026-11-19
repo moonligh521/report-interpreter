@@ -178,4 +178,14 @@ AC-R1～R10 同前，另 **AC-R11**：无 Map；SQL 仅 xml。
 
 ## 7. 完成定义
 
-- [ ] SDD 状态机/矩阵冻结；TDD+AC；合入  
+- [x] SDD 状态机/矩阵冻结（通知状态机、身份/覆盖/规则出口矩阵见代码 `NotificationStatus` / `SafetyGate`）
+- [x] TDD+AC（`mvn -B verify` 通过，92 个测试全绿；AC-R1～R11 均有对应测试）
+- [ ] 合入版本开发分支（待评审合并）
+
+### 实现约定（落地时补充）
+
+- 身份：`expectedPatientName` 为建单可选表单参数，存 `report_job.expected_patient_name`；报告无身份、或未提供期望姓名 → `MISSING`（保守，不自动绑定）。
+- GET 详情：存在阻断时 `Result.code` 取 4108 / 4110 / 4109 / 4106（优先级依次），`data` 仍返回；`CONFLICT` 时不返回指标明细。
+- 规则出口状态：`BLOCKED`（身份冲突）/ `NEED_MANUAL_REVIEW`（身份缺失、覆盖 UNKNOWN/PARTIAL、危急适用性 UNKNOWN）/ `RULE_CHECKED`。
+- 新增表 `report_rule_summary`（身份、覆盖证据 JSON、报告级结论）；`report_rule_execution` 增 `indicator_id` / `canonical_code` / `reference_rule_id` / `critical_rule_id`；`report_review_task` 增 `idempotency_key`。
+- 内置危急规则仅 K（HIGH >= 6.0、LOW < 2.5 mmol/L），规则集版本 `rules-v1.0.0`；其它项目 `NO_RULE`（≠ NOT_CRITICAL），上线前须机构审核。  

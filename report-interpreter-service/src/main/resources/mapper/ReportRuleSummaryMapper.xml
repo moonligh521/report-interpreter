@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportRuleSummaryMapper">
+
+    <insert id="insert">
+        INSERT INTO report_rule_summary
+        (report_id, parse_version, rule_version, identity_status, identity_detail,
+         coverage_status, coverage_evidence_json, outcome_status,
+         archive_blocked, safe_normal_allowed, block_code, created_at)
+        VALUES
+        (#{reportId}, #{parseVersion}, #{ruleVersion}, #{identityStatus}, #{identityDetail},
+         #{coverageStatus}, #{coverageEvidenceJson}, #{outcomeStatus},
+         #{archiveBlocked}, #{safeNormalAllowed}, #{blockCode}, CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="find" resultType="com.moonligh.report.infrastructure.persistence.ReportRuleSummaryRow">
+        SELECT report_id AS reportId, parse_version AS parseVersion, rule_version AS ruleVersion,
+               identity_status AS identityStatus, identity_detail AS identityDetail,
+               coverage_status AS coverageStatus, coverage_evidence_json AS coverageEvidenceJson,
+               outcome_status AS outcomeStatus, archive_blocked AS archiveBlocked,
+               safe_normal_allowed AS safeNormalAllowed, block_code AS blockCode,
+               created_at AS createdAt
+        FROM report_rule_summary
+        WHERE report_id = #{reportId} AND parse_version = #{parseVersion}
+    </select>
+
+</mapper>

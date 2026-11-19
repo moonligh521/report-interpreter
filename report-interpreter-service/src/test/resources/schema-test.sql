@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS report_job (
   report_type      VARCHAR(32),
   request_hash     VARCHAR(64),
   source_text      CLOB,
+  expected_patient_name VARCHAR(128),
   created_at       TIMESTAMP(3) NOT NULL,
   updated_at       TIMESTAMP(3) NOT NULL,
   CONSTRAINT uk_report_job_idem UNIQUE (account_id, idempotency_key)
@@ -59,4 +60,74 @@ CREATE TABLE IF NOT EXISTS report_source_evidence (
   page_index    INT          NOT NULL,
   raw_text      VARCHAR(2000) NOT NULL,
   region_json   VARCHAR(512)
+);
+
+CREATE TABLE IF NOT EXISTS report_rule_execution (
+  id                     VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id              VARCHAR(64)  NOT NULL,
+  parse_version          INT          NOT NULL,
+  rule_version           VARCHAR(32)  NOT NULL,
+  indicator_id           VARCHAR(64),
+  canonical_code         VARCHAR(32),
+  reference_rule_id      VARCHAR(64),
+  critical_rule_id       VARCHAR(64),
+  context_snapshot_json  CLOB         NOT NULL,
+  reference_result       VARCHAR(32)  NOT NULL,
+  critical_result        VARCHAR(32)  NOT NULL,
+  applicability_result   VARCHAR(32)  NOT NULL,
+  created_at             TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS report_critical_event (
+  event_id         VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id        VARCHAR(64)  NOT NULL,
+  parse_version    INT          NOT NULL,
+  canonical_code   VARCHAR(32)  NOT NULL,
+  critical_level   VARCHAR(16)  NOT NULL,
+  event_status     VARCHAR(32)  NOT NULL,
+  detection_time   TIMESTAMP(3) NOT NULL,
+  idempotency_key  VARCHAR(190) NOT NULL,
+  CONSTRAINT uk_critical_event_idem UNIQUE (idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_critical_notification_outbox (
+  outbox_id            VARCHAR(64)  NOT NULL PRIMARY KEY,
+  event_id             VARCHAR(64)  NOT NULL,
+  notification_status  VARCHAR(32)  NOT NULL,
+  delivery_channel     VARCHAR(32)  NOT NULL,
+  idempotency_key      VARCHAR(190) NOT NULL,
+  attempt_count        INT          NOT NULL,
+  next_retry_at        TIMESTAMP(3),
+  last_error_code      VARCHAR(64),
+  delivered_at         TIMESTAMP(3),
+  created_at           TIMESTAMP(3) NOT NULL,
+  updated_at           TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_critical_outbox_idem UNIQUE (idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_review_task (
+  review_task_id   VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id        VARCHAR(64)  NOT NULL,
+  reason           VARCHAR(512) NOT NULL,
+  priority         VARCHAR(16)  NOT NULL,
+  status           VARCHAR(16)  NOT NULL,
+  idempotency_key  VARCHAR(64)  NOT NULL,
+  created_at       TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_review_task_idem UNIQUE (idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_rule_summary (
+  report_id               VARCHAR(64)  NOT NULL,
+  parse_version           INT          NOT NULL,
+  rule_version            VARCHAR(32)  NOT NULL,
+  identity_status         VARCHAR(16)  NOT NULL,
+  identity_detail         VARCHAR(256),
+  coverage_status         VARCHAR(16)  NOT NULL,
+  coverage_evidence_json  CLOB         NOT NULL,
+  outcome_status          VARCHAR(32)  NOT NULL,
+  archive_blocked         TINYINT      NOT NULL,
+  safe_normal_allowed     TINYINT      NOT NULL,
+  block_code              INT,
+  created_at              TIMESTAMP(3) NOT NULL,
+  PRIMARY KEY (report_id, parse_version)
 );

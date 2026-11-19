@@ -22,6 +22,7 @@ import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
 import com.moonligh.report.api.res.BoundingBox;
 import com.moonligh.report.api.res.CreateReportRes;
+import com.moonligh.report.api.res.CriticalEventsRes;
 import com.moonligh.report.api.res.FieldConfidence;
 import com.moonligh.report.api.res.IndicatorDto;
 import com.moonligh.report.api.res.ReportDetailRes;
@@ -37,6 +38,9 @@ import com.moonligh.report.domain.parse.ReportParseStore;
 import com.moonligh.report.domain.parse.ReportParser;
 import com.moonligh.report.domain.parse.ReportType;
 import com.moonligh.report.domain.parse.UploadGuard;
+import com.moonligh.report.domain.rule.IdentifiedIndicator;
+import com.moonligh.report.domain.rule.IdentityStatus;
+import com.moonligh.report.domain.rule.SafetyVerdict;
 import com.moonligh.report.infrastructure.persistence.ReportIndicatorRow;
 import com.moonligh.report.infrastructure.persistence.ReportJobRow;
 import com.moonligh.report.infrastructure.persistence.ReportParseResultRow;
@@ -51,30 +55,36 @@ public class ReportParseService {
     static final String STATUS_CREATED = "CREATED";
     static final String STATUS_PARSED = "PARSED";
     private static final String UNKNOWN_TYPE = "UNKNOWN";
+    private static final int MAX_NAME_LENGTH = 128;
 
     private final ReportJobStore jobs;
     private final ReportParseStore parses;
     private final ParserRegistry registry;
     private final ReportProperties properties;
+    private final ReportRuleService rules;
     private final ObjectMapper json = new ObjectMapper();
 
     public ReportParseService(
-            ReportJobStore jobs, ReportParseStore parses, ParserRegistry registry, ReportProperties properties) {
+            ReportJobStore jobs, ReportParseStore parses, ParserRegistry registry, ReportProperties properties,
+            ReportRuleService rules) {
         this.jobs = jobs;
         this.parses = parses;
         this.registry = registry;
         this.properties = properties;
+        this.rules = rules;
     }
 
     @Transactional
     public CreateReportRes create(
-            String accountId, String patientId, String idempotencyKey, String reportType, UploadedFile file) {
+            String accountId, String patientId, String idempotencyKey, String reportType, UploadedFile file,
+            String expectedPatientName) {
         if (!StringUtils.hasText(patientId)) {
             throw new BusinessException(ErrorCode.PARAM_MISSING, "patientId 不能为空");
         }
         ReportType type = resolveType(reportType);
         UploadGuard.Kind kind = checkFile(file);
-        String hash = requestHash(patientId, type, file.content());
+        String expectedName = normalizeExpectedName(expectedPatientName);
+        String hash = requestHash(patientId, type, expectedName, file.content());
 
         Optional<ReportJobRow> existing = jobs.findByIdempotency(accountId, idempotencyKey);
         if (existing.isPresent()) {
@@ -86,7 +96,7 @@ public class ReportParseService {
                 : null;
         ReportJobRow row = new ReportJobRow(
                 reportId, accountId, patientId, idempotencyKey, STATUS_CREATED, 1L,
-                type.name(), hash, sourceText, null, null);
+                type.name(), hash, sourceText, expectedName, null, null);
         try {
             jobs.insert(row);
         } catch (DuplicateKeyException e) {
@@ -99,8 +109,8 @@ public class ReportParseService {
             // 二进制 PDF/图片：P0 尚未接入 OCR 引擎，仅建单。
             return new CreateReportRes(reportId, STATUS_CREATED, 0);
         }
-        int version = runParse(reportId, ctx, parser.get(), null);
-        return new CreateReportRes(reportId, STATUS_PARSED, version);
+        ParseOutcome outcome = runParse(reportId, ctx, parser.get(), null, expectedName);
+        return new CreateReportRes(reportId, outcome.verdict().status().name(), outcome.version());
     }
 
     @Transactional
@@ -120,8 +130,8 @@ public class ReportParseService {
                 reportId, type, "reparse.lab.txt", "text/plain", job.sourceText().getBytes(StandardCharsets.UTF_8));
         ReportParser parser = registry.find(ctx)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "无可用解析器"));
-        int version = runParse(reportId, ctx, parser, idempotencyKey);
-        return new CreateReportRes(reportId, STATUS_PARSED, version);
+        ParseOutcome outcome = runParse(reportId, ctx, parser, idempotencyKey, job.expectedPatientName());
+        return new CreateReportRes(reportId, outcome.verdict().status().name(), outcome.version());
     }
 
     @Transactional(readOnly = true)
@@ -132,18 +142,48 @@ public class ReportParseService {
         String jobType = job.reportType() == null ? UNKNOWN_TYPE : job.reportType();
         Optional<ReportParseResultRow> active = parses.findActive(reportId);
         if (active.isEmpty()) {
-            return new ReportDetailRes(reportId, jobType, job.status(), 0, false, 0.0, List.of());
+            return new ReportDetailRes(
+                    reportId, jobType, job.status(), 0, false, 0.0, List.of(),
+                    null, null, List.of(), List.of(), true, false, null, null);
         }
         ReportParseResultRow parse = active.get();
-        List<IndicatorDto> indicators = parses.listIndicators(parse.id()).stream().map(this::toDto).toList();
+        Optional<ReportRuleService.RuleView> view = rules.view(reportId, parse.parseVersion());
+        if (view.isEmpty()) {
+            // 该版本未执行规则：不得视为安全，默认阻断归档。
+            List<IndicatorDto> all = parses.listIndicators(parse.id()).stream().map(this::toDto).toList();
+            return new ReportDetailRes(
+                    reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
+                    parse.parseConfidence(), all, null, null, List.of(), List.of(), true, false, null, null);
+        }
+        ReportRuleService.RuleView v = view.get();
+        // 身份冲突：报告可能属于他人，不向调用方返回指标明细。
+        boolean conflict = IdentityStatus.CONFLICT.name().equals(v.identityCheck().status());
+        List<IndicatorDto> indicators = conflict
+                ? List.of()
+                : parses.listIndicators(parse.id()).stream().map(this::toDto).toList();
         return new ReportDetailRes(
                 reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
-                parse.parseConfidence(), indicators);
+                parse.parseConfidence(), indicators, v.identityCheck(), v.criticalCoverage(), v.abnormals(),
+                v.criticalHits(), v.archiveBlocked(), v.safeNormalAllowed(), v.blockCode(), v.ruleVersion());
+    }
+
+    /** 报告的危急事件列表；仅报告所属账号可读。 */
+    @Transactional(readOnly = true)
+    public CriticalEventsRes criticalEvents(String accountId, String reportId) {
+        jobs.findById(reportId)
+                .filter(j -> j.accountId().equals(accountId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARAM_INVALID, "找不到该报告任务"));
+        return new CriticalEventsRes(reportId, rules.criticalEvents(reportId));
     }
 
     // ---- 内部 ----
 
-    private int runParse(String reportId, ParseContext ctx, ReportParser parser, String requestKey) {
+    /** 解析版本号与规则出口结论。 */
+    private record ParseOutcome(int version, SafetyVerdict verdict) {
+    }
+
+    private ParseOutcome runParse(
+            String reportId, ParseContext ctx, ReportParser parser, String requestKey, String expectedName) {
         ParseResult result = parser.parse(ctx);
         ParseQualityGate.check(result);
         int version = parses.maxVersion(reportId) + 1;
@@ -155,15 +195,19 @@ public class ReportParseService {
 
         List<ReportIndicatorRow> rows = new ArrayList<>();
         List<ReportSourceEvidenceRow> evidences = new ArrayList<>();
+        List<IdentifiedIndicator> identified = new ArrayList<>();
         for (ParsedIndicator ind : result.indicators()) {
             String indicatorId = "ind_" + UUID.randomUUID().toString().replace("-", "");
             rows.add(toRow(indicatorId, parseId, reportId, version, ind));
             evidences.add(toEvidenceRow(indicatorId, ind.evidence()));
+            identified.add(new IdentifiedIndicator(indicatorId, ind));
         }
         parses.insertIndicators(rows);
         evidences.forEach(parses::insertEvidence);
         jobs.updateStatus(reportId, STATUS_PARSED);
-        return version;
+        // PARSED 之后自动执行规则：身份 / 覆盖 / 参考区间 / 危急，状态推进到规则出口。
+        SafetyVerdict verdict = rules.run(reportId, version, result, identified, expectedName);
+        return new ParseOutcome(version, verdict);
     }
 
     private CreateReportRes replay(ReportJobRow existing, String hash) {
@@ -193,12 +237,25 @@ public class ReportParseService {
                 file.fileName(), file.contentType(), file.content(), p.getMaxFileBytes(), p.isAllowTextFixture());
     }
 
-    private static String requestHash(String patientId, ReportType type, byte[] content) {
+    private static String normalizeExpectedName(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String name = raw.strip();
+        if (name.length() > MAX_NAME_LENGTH) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "expectedPatientName 过长");
+        }
+        return name;
+    }
+
+    private static String requestHash(String patientId, ReportType type, String expectedName, byte[] content) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             md.update(patientId.getBytes(StandardCharsets.UTF_8));
             md.update((byte) '\n');
             md.update(type.name().getBytes(StandardCharsets.UTF_8));
+            md.update((byte) '\n');
+            md.update((expectedName == null ? "" : expectedName).getBytes(StandardCharsets.UTF_8));
             md.update((byte) '\n');
             md.update(content);
             return HexFormat.of().formatHex(md.digest());

@@ -46,6 +46,7 @@ class ReportJobMapperXmlTest {
                 "LAB_PANEL",
                 "hash-m",
                 null,
+                "张三",
                 null,
                 null);
         mapper.insert(row);

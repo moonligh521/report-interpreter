@@ -53,6 +53,31 @@ final class ReportTestSupport {
         return read(mvc.perform(b).andReturn().getResponse().getContentAsString());
     }
 
+    static JsonNode createWithExpected(
+            MockMvc mvc, String account, String key, String expectedPatientName, MockMultipartFile file)
+            throws Exception {
+        MockMultipartHttpServletRequestBuilder b = multipart("/api/report/reports")
+                .file(file)
+                .param("patientId", "p-rules")
+                .header(AuthTokens.ACCOUNT_HEADER, account)
+                .header("Idempotency-Key", key);
+        if (expectedPatientName != null) {
+            b.param("expectedPatientName", expectedPatientName);
+        }
+        return read(mvc.perform(b).andReturn().getResponse().getContentAsString());
+    }
+
+    static JsonNode criticalEvents(MockMvc mvc, String account, String reportId) throws Exception {
+        return read(mvc.perform(get("/api/report/reports/" + reportId + "/critical-events")
+                        .header(AuthTokens.ACCOUNT_HEADER, account))
+                .andReturn().getResponse().getContentAsString());
+    }
+
+    /** 以期望姓名建单并返回 reportId 与创建响应。 */
+    static JsonNode createRules(MockMvc mvc, String account, String fixture, String expectedName) throws Exception {
+        return createWithExpected(mvc, account, uniq("k"), expectedName, labFile(golden(fixture)));
+    }
+
     static JsonNode reparse(MockMvc mvc, String account, String key, String reportId) throws Exception {
         return read(mvc.perform(post("/api/report/reports/" + reportId + "/reparse")
                         .header(AuthTokens.ACCOUNT_HEADER, account)
