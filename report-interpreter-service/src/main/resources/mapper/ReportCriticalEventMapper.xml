@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportCriticalEventMapper">
+
+    <sql id="cols">
+        event_id AS eventId, report_id AS reportId, parse_version AS parseVersion,
+        canonical_code AS canonicalCode, critical_level AS criticalLevel,
+        event_status AS eventStatus, detection_time AS detectionTime,
+        idempotency_key AS idempotencyKey
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_critical_event
+        (event_id, report_id, parse_version, canonical_code, critical_level,
+         event_status, detection_time, idempotency_key)
+        VALUES
+        (#{eventId}, #{reportId}, #{parseVersion}, #{canonicalCode}, #{criticalLevel},
+         #{eventStatus}, #{detectionTime}, #{idempotencyKey})
+    </insert>
+
+    <select id="listByReport" resultType="com.moonligh.report.infrastructure.persistence.ReportCriticalEventRow">
+        SELECT <include refid="cols"/>
+        FROM report_critical_event
+        WHERE report_id = #{reportId}
+        ORDER BY detection_time ASC, event_id ASC
+    </select>
+
+    <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportCriticalEventRow">
+        SELECT <include refid="cols"/>
+        FROM report_critical_event
+        WHERE idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findById" resultType="com.moonligh.report.infrastructure.persistence.ReportCriticalEventRow">
+        SELECT <include refid="cols"/>
+        FROM report_critical_event
+        WHERE event_id = #{eventId}
+    </select>
+
+</mapper>

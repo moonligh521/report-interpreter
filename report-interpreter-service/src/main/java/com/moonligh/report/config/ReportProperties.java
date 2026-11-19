@@ -13,6 +13,8 @@ public class ReportProperties {
 
     private final Parse parse = new Parse();
 
+    private final Critical critical = new Critical();
+
     public String getDisplayName() {
         return displayName;
     }
@@ -23,6 +25,10 @@ public class ReportProperties {
 
     public Parse getParse() {
         return parse;
+    }
+
+    public Critical getCritical() {
+        return critical;
     }
 
     /** report.parse.*：上传与解析限制。 */
@@ -48,6 +54,21 @@ public class ReportProperties {
 
         public void setAllowTextFixture(boolean allowTextFixture) {
             this.allowTextFixture = allowTextFixture;
+        }
+    }
+
+    /** report.critical.*：危急通知。 */
+    public static class Critical {
+
+        /** 单条危急通知最大投递次数，超过后升级为 ESCALATED（人工）。 */
+        private int maxNotifyAttempts = 5;
+
+        public int getMaxNotifyAttempts() {
+            return maxNotifyAttempts;
+        }
+
+        public void setMaxNotifyAttempts(int maxNotifyAttempts) {
+            this.maxNotifyAttempts = maxNotifyAttempts;
         }
     }
 }

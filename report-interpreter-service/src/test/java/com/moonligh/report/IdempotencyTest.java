@@ -33,7 +33,7 @@ class IdempotencyTest {
         assertEquals(200, b.path("code").asInt());
         assertEquals(a.path("data").path("reportId").asText(), b.path("data").path("reportId").asText());
         assertEquals(1, b.path("data").path("parseVersion").asInt());
-        assertEquals("PARSED", b.path("data").path("status").asText());
+        assertEquals("NEED_MANUAL_REVIEW", b.path("data").path("status").asText());
     }
 
     @Test

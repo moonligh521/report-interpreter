@@ -56,7 +56,8 @@ class LabParserGoldenTest {
                 mvc, account, ReportTestSupport.uniq("k"), "LAB_PANEL",
                 ReportTestSupport.labFile(ReportTestSupport.golden("lab-panel-basic.lab.txt")));
         assertEquals(200, created.path("code").asInt());
-        assertEquals("PARSED", created.path("data").path("status").asText());
+        // 规则自动执行后状态为规则出口；该夹具无身份行 → NEED_MANUAL_REVIEW。
+        assertEquals("NEED_MANUAL_REVIEW", created.path("data").path("status").asText());
         assertEquals(1, created.path("data").path("parseVersion").asInt());
 
         JsonNode detail = ReportTestSupport.detail(mvc, account, created.path("data").path("reportId").asText());

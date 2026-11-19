@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportRuleExecutionMapper">
+
+    <insert id="insert">
+        INSERT INTO report_rule_execution
+        (id, report_id, parse_version, rule_version, indicator_id, canonical_code,
+         reference_rule_id, critical_rule_id,
+         context_snapshot_json, reference_result, critical_result, applicability_result,
+         created_at)
+        VALUES
+        (#{id}, #{reportId}, #{parseVersion}, #{ruleVersion}, #{indicatorId}, #{canonicalCode},
+         #{referenceRuleId}, #{criticalRuleId},
+         #{contextSnapshotJson}, #{referenceResult}, #{criticalResult}, #{applicabilityResult},
+         CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="listByReport" resultType="com.moonligh.report.infrastructure.persistence.ReportRuleExecutionRow">
+        SELECT id, report_id AS reportId, parse_version AS parseVersion, rule_version AS ruleVersion,
+               indicator_id AS indicatorId, canonical_code AS canonicalCode,
+               reference_rule_id AS referenceRuleId, critical_rule_id AS criticalRuleId,
+               context_snapshot_json AS contextSnapshotJson,
+               reference_result AS referenceResult, critical_result AS criticalResult,
+               applicability_result AS applicabilityResult, created_at AS createdAt
+        FROM report_rule_execution
+        WHERE report_id = #{reportId}
+        ORDER BY created_at DESC, id ASC
+    </select>
+
+</mapper>

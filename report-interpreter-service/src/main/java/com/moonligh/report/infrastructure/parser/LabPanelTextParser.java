@@ -15,6 +15,7 @@ import com.moonligh.report.api.res.SourceEvidence;
 import com.moonligh.report.domain.parse.ParseContext;
 import com.moonligh.report.domain.parse.ParseResult;
 import com.moonligh.report.domain.parse.ParsedIndicator;
+import com.moonligh.report.domain.parse.ReportMeta;
 import com.moonligh.report.domain.parse.ReportParser;
 import com.moonligh.report.domain.parse.ReportType;
 
@@ -22,6 +23,10 @@ import com.moonligh.report.domain.parse.ReportType;
  * LAB_PANEL 文本解析器（P0，金标夹具格式，未接真实 OCR）。
  * <pre>
  * REPORT_TYPE=LAB_PANEL
+ * [PATIENT_NAME=姓名]            可选，报告自带身份（金标夹具用）
+ * [PAGE_COUNT=N]                 可选，声明总页数
+ * [FAILED_PAGES=1,2]             可选，解析失败页
+ * [UNRECOGNIZED_REGIONS=a;b]     可选，未识别文本区
  * rawName|rawValue|rawUnit|refLow|refHigh|rawText|pageIndex
  * </pre>
  */
@@ -29,6 +34,10 @@ import com.moonligh.report.domain.parse.ReportType;
 public class LabPanelTextParser implements ReportParser {
 
     static final String TYPE_PREFIX = "REPORT_TYPE=";
+    static final String NAME_PREFIX = "PATIENT_NAME=";
+    static final String PAGE_COUNT_PREFIX = "PAGE_COUNT=";
+    static final String FAILED_PAGES_PREFIX = "FAILED_PAGES=";
+    static final String UNRECOGNIZED_PREFIX = "UNRECOGNIZED_REGIONS=";
 
     @Override
     public boolean supports(ParseContext context) {
@@ -43,6 +52,7 @@ public class LabPanelTextParser implements ReportParser {
     public ParseResult parse(ParseContext context) {
         String text = new String(context.content(), StandardCharsets.UTF_8);
         List<ParsedIndicator> indicators = new ArrayList<>();
+        MetaBuilder meta = new MetaBuilder();
         boolean headerSeen = false;
         for (String line : text.split("\\r?\\n")) {
             String trimmed = line.strip();
@@ -54,6 +64,9 @@ public class LabPanelTextParser implements ReportParser {
                 headerSeen = true;
                 continue;
             }
+            if (meta.accept(trimmed)) {
+                continue;
+            }
             indicators.add(parseLine(trimmed));
         }
         if (!headerSeen) {
@@ -63,7 +76,50 @@ public class LabPanelTextParser implements ReportParser {
                 .mapToDouble(i -> i.confidence().min())
                 .min()
                 .orElse(0.0);
-        return new ParseResult(ReportType.LAB_PANEL, List.copyOf(indicators), overall);
+        return new ParseResult(ReportType.LAB_PANEL, List.copyOf(indicators), overall, meta.build());
+    }
+
+    /** 收集报告级指令行（身份、页数、失败页、未识别区）。 */
+    private static final class MetaBuilder {
+
+        private String patientName;
+        private Integer totalPages;
+        private final List<Integer> failedPages = new ArrayList<>();
+        private final List<String> regions = new ArrayList<>();
+
+        /** 命中指令行返回 true，否则交给指标行解析。 */
+        boolean accept(String line) {
+            if (line.startsWith(NAME_PREFIX)) {
+                patientName = line.substring(NAME_PREFIX.length()).strip();
+                return true;
+            }
+            if (line.startsWith(PAGE_COUNT_PREFIX)) {
+                totalPages = parsePage(line.substring(PAGE_COUNT_PREFIX.length()));
+                return true;
+            }
+            if (line.startsWith(FAILED_PAGES_PREFIX)) {
+                for (String p : line.substring(FAILED_PAGES_PREFIX.length()).split(",")) {
+                    Integer page = parsePage(p);
+                    if (page != null) {
+                        failedPages.add(page);
+                    }
+                }
+                return true;
+            }
+            if (line.startsWith(UNRECOGNIZED_PREFIX)) {
+                for (String r : line.substring(UNRECOGNIZED_PREFIX.length()).split(";")) {
+                    if (!r.isBlank()) {
+                        regions.add(r.strip());
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        ReportMeta build() {
+            return new ReportMeta(patientName, totalPages, failedPages, regions);
+        }
     }
 
     private void checkHeader(String line) {
