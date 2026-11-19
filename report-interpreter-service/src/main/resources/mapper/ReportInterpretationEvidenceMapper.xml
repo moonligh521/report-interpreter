@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportInterpretationEvidenceMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO report_interpretation_evidence
+        (id, interpretation_id, evidence_id, doc_id, title, snippet, url)
+        VALUES
+        <foreach collection="rows" item="r" separator=",">
+            (#{r.id}, #{r.interpretationId}, #{r.evidenceId}, #{r.docId}, #{r.title}, #{r.snippet}, #{r.url})
+        </foreach>
+    </insert>
+
+    <select id="listByInterpretation" resultType="com.moonligh.report.infrastructure.persistence.ReportInterpretationEvidenceRow">
+        SELECT id, interpretation_id AS interpretationId, evidence_id AS evidenceId, doc_id AS docId,
+               title, snippet, url
+        FROM report_interpretation_evidence
+        WHERE interpretation_id = #{interpretationId}
+        ORDER BY evidence_id
+    </select>
+
+</mapper>

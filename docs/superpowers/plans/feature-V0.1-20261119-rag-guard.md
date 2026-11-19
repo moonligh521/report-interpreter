@@ -120,4 +120,14 @@ AC-G1～G9 + **AC-G10** 无 Map/SQL 仅 xml。
 
 ## 7. 完成定义
 
-- [ ] SDD；TDD+AC；合入  
+- [x] SDD 冻结（`ValidationStatus` 严重度、Guard 失败策略、结果码 4104/4105/4107 见代码与测试）
+- [x] TDD+AC（`mvn -B verify` 通过，195 个测试全绿；AC-G1～G10 均有对应测试；FakeInterpretationModel 驱动，无需真实 LLM）
+- [ ] 合入版本开发分支（待评审合并）
+
+### 实现备注
+
+- 结果码：校验未通过 `4107`（data 仅含通过 Guard 的块）；报告含危急值 `4105`（data 仍返回，首块恒为 Java 模板 `CRITICAL_ALERT`）；`allow-degraded=false` 且 KB 无依据 `4104`；身份冲突 / 缺失沿用 `4108` / `4110`（不出解读）。
+- Guard 严重度：`SAFETY_VIOLATION`（诊断/处方词、降低危急）立即终止 > `CONFLICT` > `UNSUPPORTED` > `RETRYABLE`（改数，最多 `report.interpretation.max-attempts` 次重生成）。
+- 召回 fail-closed：存储异常 / 过滤后为空 / 模糊词无命中均返回空列表 + `RecallEmptyReason`；存储层漏过滤也由 `HybridRecall` 二次校验；`intersect(ids 空)` 返回空列表。
+- 纠正不删 critical_event：解读与重解析不触碰事件表；当前版本不再危急但历史事件仍在时，输出 `NOTICE` 并保持 `4105`。
+- 已知后续：真实 LLM 适配器与 SSE 落库在 `delivery-gate`；KB 生产 DDL 随部署脚本，本仓仅 `schema-test.sql`。  

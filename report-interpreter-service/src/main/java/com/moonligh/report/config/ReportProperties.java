@@ -15,6 +15,12 @@ public class ReportProperties {
 
     private final Critical critical = new Critical();
 
+    private final Interpretation interpretation = new Interpretation();
+
+    public Interpretation getInterpretation() {
+        return interpretation;
+    }
+
     public String getDisplayName() {
         return displayName;
     }
@@ -54,6 +60,46 @@ public class ReportProperties {
 
         public void setAllowTextFixture(boolean allowTextFixture) {
             this.allowTextFixture = allowTextFixture;
+        }
+    }
+
+    /** report.interpretation.*：解读与 KB 依赖策略。 */
+    public static class Interpretation {
+
+        /**
+         * 知识库无可引用依据（为空或不可用）时是否允许降级解读（仅复述报告数据与规则判定）。
+         * 为 false 时 fail-closed，返回 4104。
+         */
+        private boolean allowDegraded = true;
+
+        /** 召回的结构化过滤所用专科（LAB_PANEL 对应）。 */
+        private String labSpecialty = "LAB";
+
+        /** Guard 对 RETRYABLE 的最大生成次数（含首次）。 */
+        private int maxAttempts = 2;
+
+        public boolean isAllowDegraded() {
+            return allowDegraded;
+        }
+
+        public void setAllowDegraded(boolean allowDegraded) {
+            this.allowDegraded = allowDegraded;
+        }
+
+        public String getLabSpecialty() {
+            return labSpecialty;
+        }
+
+        public void setLabSpecialty(String labSpecialty) {
+            this.labSpecialty = labSpecialty;
+        }
+
+        public int getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(int maxAttempts) {
+            this.maxAttempts = maxAttempts;
         }
     }
 
