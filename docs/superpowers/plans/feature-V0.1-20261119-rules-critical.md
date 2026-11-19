@@ -180,7 +180,7 @@ AC-R1～R10 同前，另 **AC-R11**：无 Map；SQL 仅 xml。
 
 - [x] SDD 状态机/矩阵冻结（通知状态机、身份/覆盖/规则出口矩阵见代码 `NotificationStatus` / `SafetyGate`）
 - [x] TDD+AC（`mvn -B verify` 通过，92 个测试全绿；AC-R1～R11 均有对应测试）
-- [ ] 合入版本开发分支（待评审合并）
+- [x] 合入版本开发分支 `feature-V0.1-20261119`
 
 ### 实现约定（落地时补充）
 

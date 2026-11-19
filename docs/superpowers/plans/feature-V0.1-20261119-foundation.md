@@ -133,5 +133,5 @@
 ## 7. 完成定义
 
 - [x] SDD 冻结；TDD 绿（`mvn -B verify` 13 tests）；AC-F1～F9 本分支代码侧达标  
-- [ ] 合入版本开发分支 `feature-V0.1-20261119`（待你确认提交/合并）  
-- [ ] 平台仓 41xx 已本地 install；远端合入 `moonligh-platform` 待另开 PR  
+- [x] 合入版本开发分支 `feature-V0.1-20261119`  
+- [x] 平台仓 41xx 已本地合入分支 `feature-V1.0-20261119-report-error-codes`（远端 PR 可另开）  

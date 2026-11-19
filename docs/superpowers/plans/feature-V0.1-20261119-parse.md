@@ -141,7 +141,7 @@ SPI：`ReportParser#supports` / `#parse(ParseContext): ParseResult` — 强类�
 
 - [x] SDD  
 - [x] TDD+AC（`mvn -B verify` 通过，44 个测试全绿）  
-- [ ] 合入版本开发分支（待评审合并）  
+- [x] 合入版本开发分支 `feature-V0.1-20261119`  
 
 ### 实现说明与遗留
 

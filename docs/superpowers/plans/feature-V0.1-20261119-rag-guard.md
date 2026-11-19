@@ -122,7 +122,7 @@ AC-G1～G9 + **AC-G10** 无 Map/SQL 仅 xml。
 
 - [x] SDD 冻结（`ValidationStatus` 严重度、Guard 失败策略、结果码 4104/4105/4107 见代码与测试）
 - [x] TDD+AC（`mvn -B verify` 通过，195 个测试全绿；AC-G1～G10 均有对应测试；FakeInterpretationModel 驱动，无需真实 LLM）
-- [ ] 合入版本开发分支（待评审合并）
+- [x] 合入版本开发分支 `feature-V0.1-20261119`
 
 ### 实现备注
 
