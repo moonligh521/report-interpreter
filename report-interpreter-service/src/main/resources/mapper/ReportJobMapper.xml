@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportJobMapper">
+
+    <insert id="insert">
+        INSERT INTO report_job
+        (report_id, account_id, patient_id, idempotency_key, status, epoch, created_at, updated_at)
+        VALUES
+        (#{reportId}, #{accountId}, #{patientId}, #{idempotencyKey}, #{status}, #{epoch},
+         CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findById" resultType="com.moonligh.report.infrastructure.persistence.ReportJobRow">
+        SELECT report_id AS reportId,
+               account_id AS accountId,
+               patient_id AS patientId,
+               idempotency_key AS idempotencyKey,
+               status,
+               epoch,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM report_job
+        WHERE report_id = #{reportId}
+    </select>
+
+    <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportJobRow">
+        SELECT report_id AS reportId,
+               account_id AS accountId,
+               patient_id AS patientId,
+               idempotency_key AS idempotencyKey,
+               status,
+               epoch,
+               created_at AS createdAt,
+               updated_at AS updatedAt
+        FROM report_job
+        WHERE account_id = #{accountId}
+          AND idempotency_key = #{idempotencyKey}
+    </select>
+</mapper>

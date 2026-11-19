@@ -1,0 +1,52 @@
+server:
+  port: 18092
+
+spring:
+  application:
+    name: report-interpreter
+  config:
+    import:
+      - optional:file:./config/application-local.yml
+      - optional:file:../config/application-local.yml
+      - optional:file:../../config/application-local.yml
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/report_interpreter?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8&useUnicode=true&serverTimezone=Asia/Shanghai
+    username: root
+    password: your_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true
+    jdbc-type-for-null: "NULL"
+
+consult:
+  auth:
+    jwt-secret: consult-dev-jwt-secret-key-32bytes!
+    jwt-ttl-hours: 168
+    internal-token: consult-internal
+    open-paths:
+      - /actuator/health
+      - /actuator/health/liveness
+      - /actuator/health/readiness
+    open-path-prefixes: []
+    staff-only-prefixes: []
+
+report:
+  display-name: report-interpreter
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
