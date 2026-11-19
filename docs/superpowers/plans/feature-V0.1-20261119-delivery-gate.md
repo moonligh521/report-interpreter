@@ -117,4 +117,51 @@ AC-D1～D10 + **AC-D11** 无 Map payload。
 
 ## 7. 完成定义
 
-- [ ] SDD；TDD+AC；版本分支达 V0.1 技术完成；可打 `V0.1.0`（非临床放行）  
+- [x] SDD 冻结（事件类型 / sealed payload、三生命周期、档案门禁、补偿策略见代码与测试）
+- [x] TDD+AC（`mvn -B verify` 通过，259 个测试全绿 = rag-guard 的 195 + 本分支 64；AC-D1～D11 均有对应测试，另加 D-R9 日志防泄漏测试）
+- [x] 合入版本开发分支 `feature-V0.1-20261119`；V0.1 **技术闭环**完成，可打 `V0.1.0`（非临床放行）
+
+> **V0.1 技术完成 ≠ 临床放行。** 本版本只证明「P0 技术闭环 + 安全门禁在测试夹具上成立」；
+> 真实患者 / 真实报告放行必须另走临床验证（见下「临床放行前仍缺」）。
+
+### AC 对照
+
+| AC | 内容 | 测试 |
+| --- | --- | --- |
+| AC-D1 | 重要事件落库 `report_event`，流 = DB | `SseReplayTest` |
+| AC-D2 | `Last-Event-ID` 从 DB 续传；重连再鉴权 | `SseReplayTest` |
+| AC-D3 | `(jobId, sequence)` 唯一；序号连续 | `SseReplayTest`、`MapperXmlDeliveryTest` |
+| AC-D4 | DELTA 仅 `validationStatus=VALID` | `DeltaMustBeValidTest` |
+| AC-D5 | 解读 COMPLETED ≠ 档案 SUCCESS ≠ 危急已读 | `JobCompletedVsArchiveTest` |
+| AC-D6 | MATCHED 且完成 → 档案 Outbox 同事务；失败整体回滚 | `ArchiveOutboxTxTest` |
+| AC-D7 | 非 MATCHED / 规则阻断不写可投递档案 | `ArchiveBlockedByIdentityTest` |
+| AC-D8 | 按 eventId 入队 / 消费幂等 | `OutboxIdempotencyTest` |
+| AC-D9 | 旧 epoch 拒绝、不落库、不回放 | `EpochRejectTest` |
+| AC-D10 | `POST /internal/report/jobs/{id}/compensate` | `CompensateApiTest` |
+| AC-D11 | payload / 消息 / 契约无 Map（sealed + record） | `NoMapPayloadTest` |
+| 门禁包 | deterministic / adversarial / critical / coverage 冒烟 + 交付不变量 | `GateSuiteIT` |
+| D-R9 | 日志无指标全文 / 解读文本 / 姓名 / 证件号（运行期捕获 + 源码规则） | `NoSensitiveLogTest` |
+
+### 实现备注
+
+- **jobId = reportId**（`report_job.report_id`）。`epoch` 起始为 1，**重解析（reparse）+1**；事件写入 `epoch != job.epoch` 一律拒绝（`StaleEpochException`），回放只返回当前 epoch 的事件，序号跨代连续。
+- **SSE**：`GET /api/report/reports/{reportId}/interpretation/stream` 返回 `text/event-stream`（`id:`=eventId，`event:`=类型，`data:`=单行 JSON）。当前是「回放已落库事件后结束」的续传语义（解读同步完成，事件已全部落库），客户端按 `Last-Event-ID` 重连即可；**尚无 live tail / Redis 加速**。
+- **事件**：`STRUCTURED_RESULT` → （重解读时 `CORRECTION` 先行）→ `CRITICAL_ALERT` / `INTERPRETATION_DELTA`（仅 VALID）→ `DONE`（通过）或 `ERROR`（4107）。`GET /api/report/reports/{reportId}/events` 返回事件列表 + 三条生命周期。
+- **档案**：`ArchiveGate`（MATCHED + 规则未阻断归档 + 解读完成）放行才在**解读同一事务**里写 `report_archive_outbox`（`event_id = arc_<interpretationId>`）；`ArchiveConsumer` 按 eventId 幂等落 `report_archive_record`，并二次拒绝非 MATCHED。状态机 `PENDING/FAILED/SUCCESS/DEAD`，默认最多 5 次（`report.archive.max-attempts`）。与危急通知 Outbox 分表、分状态机、分服务。
+- **补偿**：DEAD → PENDING（重置次数）；FAILED 需 `force`；SUCCESS 永不；**身份门禁不可被 force 越过**（CONFLICT 4108 / MISSING 4110 / 规则阻断 4106）。
+- **三生命周期**：解读（`COMPLETED/FAILED/NONE`，来自 `report_interpretation`）、档案（`PENDING/FAILED/SUCCESS/DEAD/BLOCKED/NONE`，来自档案 Outbox）、危急已读（`NONE/UNREAD/READ`，仅用户 `ACKNOWLEDGED` 才算 READ，`ACCEPTED` 不算）。`report_job.status` 保持规则出口状态不被覆盖，避免丢失 NEED_MANUAL_REVIEW。
+- 新表 DDL 仅在 `schema-test.sql`（生产 DDL 随部署脚本）：`report_event`、`report_archive_outbox`、`report_archive_record`。
+- 重构：`IndicatorDtoAssembler` 抽出，报告详情与档案消息共用同一份 `IndicatorDto` 口径。
+- `maven-surefire-plugin` 追加 `**/*IT.java`，`GateSuiteIT` 随 `mvn test` / `verify` 运行。
+
+### 临床放行前仍缺（非本分支范围）
+
+1. 真实 LLM 适配器与线上 Prompt 红队；目前仅 `FakeInterpretationModel` 驱动。
+2. 真实 OCR / PDF / 图片解析（P0 仅文本夹具 `LAB_PANEL`）；多页、手写、扫描质量门槛。
+3. 临床签署的危急值表与参考区间表（目前内置样例，仅 K 等少量项目），含年龄 / 性别 / 标本时间等必要条件的真实来源（`PatientFacts` 目前恒为 UNKNOWN → 相关规则 fail-closed）。
+4. 临床审定的知识库（KB 仅 `lab-min` 夹具），版本发布 / 回滚流程。
+5. 危急通知真实通道（短信 / 电话 / 院内 IM）与 SLA、人工升级（ESCALATED）处置流程；用户确认（ACKNOWLEDGED）入口目前未暴露接口。
+6. 档案真实下游（HIS / 临床数据仓库）适配器与对账；目前是本服务内的幂等落地桩。
+7. SSE live tail / Redis 加速 / 多实例一致性；Outbox 调度器与告警（当前仅有可调用的派发服务，无定时任务）。
+8. 生产 DDL / 迁移脚本、鉴权网关路由登记、审计日志与合规（等保 / 个保）评审、压测与故障演练。
+9. 真实患者数据小样本影子运行（shadow mode）与临床专家抽检，作为放行门槛。

@@ -21,11 +21,19 @@ import org.springframework.util.StringUtils;
 import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
 import com.moonligh.report.api.req.TriggerInterpretationReq;
+import com.moonligh.report.api.res.CorrectionPayload;
+import com.moonligh.report.api.res.CriticalAlertPayload;
 import com.moonligh.report.api.res.CriticalHitRes;
+import com.moonligh.report.api.res.DonePayload;
+import com.moonligh.report.api.res.ErrorPayload;
 import com.moonligh.report.api.res.EvidenceRes;
+import com.moonligh.report.api.res.IndicatorSummary;
 import com.moonligh.report.api.res.InterpretationBlockRes;
+import com.moonligh.report.api.res.InterpretationDeltaPayload;
 import com.moonligh.report.api.res.InterpretationRes;
 import com.moonligh.report.api.res.PinnedVersions;
+import com.moonligh.report.api.res.ReportEventPayload;
+import com.moonligh.report.api.res.StructuredResultPayload;
 import com.moonligh.report.config.ReportProperties;
 import com.moonligh.report.domain.interpret.BlockVerdict;
 import com.moonligh.report.domain.interpret.ClaimType;
@@ -54,6 +62,7 @@ import com.moonligh.report.domain.parse.ReportParseStore;
 import com.moonligh.report.domain.rule.CriticalStatus;
 import com.moonligh.report.domain.rule.ReferenceStatus;
 import com.moonligh.report.domain.rule.RuleExecutionStore;
+import com.moonligh.report.infrastructure.persistence.ReportArchiveOutboxRow;
 import com.moonligh.report.infrastructure.persistence.ReportIndicatorRow;
 import com.moonligh.report.infrastructure.persistence.ReportInterpretationBlockRow;
 import com.moonligh.report.infrastructure.persistence.ReportInterpretationEvidenceRow;
@@ -74,6 +83,7 @@ public class ReportInterpretationService {
     private static final Logger LOG = LoggerFactory.getLogger(ReportInterpretationService.class);
     private static final String EVIDENCE_PREFIX = "evd-";
     private static final int SNIPPET_MAX = 1000;
+    private static final String CORRECTION_REINTERPRETED = "REINTERPRETED";
 
     private final ReportJobStore jobs;
     private final ReportParseStore parses;
@@ -86,11 +96,18 @@ public class ReportInterpretationService {
     private final InterpretationStore store;
     private final ReportProperties properties;
     private final Clock clock;
+    private final ArchiveOutboxService archive;
+    private final ReportEventService events;
+    private final ReportLifecycleService lifecycle;
 
     public ReportInterpretationService(
             ReportJobStore jobs, ReportParseStore parses, RuleExecutionStore executions, ReportRuleService rules,
             HybridRecall recall, KbChunkStore kbStore, InterpretationModel model, InterpretationOutputGuard guard,
-            InterpretationStore store, ReportProperties properties, Clock clock) {
+            InterpretationStore store, ReportProperties properties, Clock clock,
+            ArchiveOutboxService archive, ReportEventService events, ReportLifecycleService lifecycle) {
+        this.archive = archive;
+        this.events = events;
+        this.lifecycle = lifecycle;
         this.jobs = jobs;
         this.parses = parses;
         this.executions = executions;
@@ -111,7 +128,10 @@ public class ReportInterpretationService {
     @Transactional
     public InterpretationView trigger(
             String accountId, String reportId, String idempotencyKey, TriggerInterpretationReq req) {
-        ReportJobRow job = ownedJob(accountId, reportId);
+        // 锁 job 行：串行化同一报告的解读与事件序号分配，并拿到当前 epoch。
+        ReportJobRow job = jobs.lockById(reportId)
+                .filter(j -> j.accountId().equals(accountId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARAM_INVALID, "找不到该报告任务"));
         Optional<ReportInterpretationRow> replay = store.findByIdempotency(job.reportId(), idempotencyKey);
         if (replay.isPresent()) {
             return toView(replay.get());
@@ -160,13 +180,68 @@ public class ReportInterpretationService {
                 InterpretationVersions.SCHEMA_VERSION, null);
         List<ReportInterpretationBlockRow> blockRows = toBlockRows(row.interpretationId(), emitted);
         List<ReportInterpretationEvidenceRow> evidenceRows = toEvidenceRows(row.interpretationId(), emitted, kbEvidence);
+        Optional<ReportInterpretationRow> previous = store.findLatest(reportId);
         try {
             store.save(row, blockRows, evidenceRows);
         } catch (DuplicateKeyException e) {
             // 并发同键：以先入库者为准回放。
             return toView(store.findByIdempotency(reportId, idempotencyKey).orElseThrow(() -> e));
         }
+        // 与解读落库同一事务：档案 Outbox（门禁放行时）+ 重要 SSE 事件。任一失败整体回滚。
+        publish(job, parse, rule, row, status, facts, blockRows, previous);
         return toView(row, blockRows, evidenceRows);
+    }
+
+    /** 解读完成后的同事务副作用：档案 Outbox 入队（仅 MATCHED 且放行）与事件落库。 */
+    private void publish(
+            ReportJobRow job, ReportParseResultRow parse, ReportRuleService.RuleView rule,
+            ReportInterpretationRow row, InterpretationStatus status, List<IndicatorFact> facts,
+            List<ReportInterpretationBlockRow> blockRows, Optional<ReportInterpretationRow> previous) {
+        String identityStatus = rule.identityCheck().status();
+        Optional<ReportArchiveOutboxRow> outbox = archive.enqueueIfAllowed(
+                job, parse, identityStatus, rule.archiveBlocked(), row.interpretationId(), status.passed());
+
+        List<ReportEventPayload> payloads = new ArrayList<>();
+        previous.ifPresent(p -> payloads.add(new CorrectionPayload(
+                p.interpretationId(), row.interpretationId(), CORRECTION_REINTERPRETED)));
+        payloads.add(new StructuredResultPayload(
+                parse.parseVersion(), identityStatus,
+                facts.stream().map(f -> new IndicatorSummary(
+                        f.canonicalCode(), f.value() == null ? null : f.value().stripTrailingZeros(), f.unit(),
+                        f.reference().name(), f.critical())).toList()));
+        List<String> criticalCodes = facts.stream().filter(IndicatorFact::critical)
+                .map(IndicatorFact::canonicalCode).toList();
+        int alertIndex = 0;
+        for (ReportInterpretationBlockRow b : blockRows) {
+            // 只有已校验（VALID）的块才会成为事件；非 VALID 永不外发。
+            if (!ValidationStatus.VALID.name().equals(b.validationStatus())) {
+                continue;
+            }
+            if (ClaimType.CRITICAL_ALERT.name().equals(b.claimType())) {
+                payloads.add(new CriticalAlertPayload(
+                        row.interpretationId(), b.blockId(), criticalCodeAt(criticalCodes, alertIndex++),
+                        b.content()));
+            } else {
+                payloads.add(new InterpretationDeltaPayload(
+                        row.interpretationId(), b.blockId(), b.claimType(), b.content(), splitIds(b.evidenceIds()),
+                        b.validationStatus()));
+            }
+        }
+        if (status.passed()) {
+            payloads.add(new DonePayload(
+                    row.interpretationId(), ReportLifecycleService.COMPLETED,
+                    outbox.map(ReportArchiveOutboxRow::status).orElse(ReportLifecycleService.BLOCKED),
+                    lifecycle.criticalReadStatus(job.reportId())));
+        } else {
+            payloads.add(new ErrorPayload(
+                    row.interpretationId(), ErrorCode.REPORT_INTERPRETATION_INVALID.getCode(), status.name()));
+        }
+        events.append(job.reportId(), job.epoch(), payloads);
+    }
+
+    /** 危急提醒块与危急事实按 javaLeadBlocks 的产出顺序一一对应；对不上时为空串（不影响外发）。 */
+    private static String criticalCodeAt(List<String> criticalCodes, int index) {
+        return index < criticalCodes.size() ? criticalCodes.get(index) : "";
     }
 
     @Transactional(readOnly = true)

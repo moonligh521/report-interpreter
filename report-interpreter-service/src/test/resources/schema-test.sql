@@ -192,3 +192,40 @@ CREATE TABLE IF NOT EXISTS report_interpretation_evidence (
   url                VARCHAR(512),
   CONSTRAINT uk_interpretation_evidence UNIQUE (interpretation_id, evidence_id)
 );
+
+CREATE TABLE IF NOT EXISTS report_event (
+  event_id      VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id     VARCHAR(64)  NOT NULL,
+  job_id        VARCHAR(64)  NOT NULL,
+  sequence      BIGINT       NOT NULL,
+  event_type    VARCHAR(32)  NOT NULL,
+  epoch         BIGINT       NOT NULL,
+  payload_json  CLOB         NOT NULL,
+  created_at    TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_report_event_job_seq UNIQUE (job_id, sequence)
+);
+
+CREATE TABLE IF NOT EXISTS report_archive_outbox (
+  outbox_id        VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id        VARCHAR(64)  NOT NULL,
+  event_id         VARCHAR(64)  NOT NULL,
+  schema_version   VARCHAR(32)  NOT NULL,
+  status           VARCHAR(16)  NOT NULL,
+  attempt_count    INT          NOT NULL,
+  last_error_code  VARCHAR(64),
+  payload_json     CLOB         NOT NULL,
+  created_at       TIMESTAMP(3) NOT NULL,
+  updated_at       TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_archive_outbox_event UNIQUE (event_id)
+);
+
+CREATE TABLE IF NOT EXISTS report_archive_record (
+  event_id           VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id          VARCHAR(64)  NOT NULL,
+  interpretation_id  VARCHAR(64)  NOT NULL,
+  patient_id         VARCHAR(64)  NOT NULL,
+  parse_version      INT          NOT NULL,
+  identity_status    VARCHAR(16)  NOT NULL,
+  indicator_count    INT          NOT NULL,
+  created_at         TIMESTAMP(3) NOT NULL
+);

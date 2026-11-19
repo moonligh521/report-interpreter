@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportArchiveRecordMapper">
+
+    <sql id="cols">
+        event_id AS eventId, report_id AS reportId, interpretation_id AS interpretationId,
+        patient_id AS patientId, parse_version AS parseVersion, identity_status AS identityStatus,
+        indicator_count AS indicatorCount, created_at AS createdAt
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_archive_record
+        (event_id, report_id, interpretation_id, patient_id, parse_version, identity_status,
+         indicator_count, created_at)
+        VALUES
+        (#{eventId}, #{reportId}, #{interpretationId}, #{patientId}, #{parseVersion}, #{identityStatus},
+         #{indicatorCount}, CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findByEventId" resultType="com.moonligh.report.infrastructure.persistence.ReportArchiveRecordRow">
+        SELECT <include refid="cols"/>
+        FROM report_archive_record
+        WHERE event_id = #{eventId}
+    </select>
+
+    <select id="countByReport" resultType="int">
+        SELECT COUNT(*)
+        FROM report_archive_record
+        WHERE report_id = #{reportId}
+    </select>
+
+</mapper>

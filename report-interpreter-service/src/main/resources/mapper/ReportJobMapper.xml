@@ -47,6 +47,12 @@
           AND idempotency_key = #{idempotencyKey}
     </select>
 
+    <update id="bumpEpoch">
+        UPDATE report_job
+        SET epoch = epoch + 1, updated_at = CURRENT_TIMESTAMP(3)
+        WHERE report_id = #{reportId}
+    </update>
+
     <update id="updateStatus">
         UPDATE report_job
         SET status = #{status}, updated_at = CURRENT_TIMESTAMP(3)

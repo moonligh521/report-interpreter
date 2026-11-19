@@ -1,6 +1,5 @@
 package com.moonligh.report.service;
 
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -20,7 +19,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
-import com.moonligh.report.api.res.BoundingBox;
 import com.moonligh.report.api.res.CreateReportRes;
 import com.moonligh.report.api.res.CriticalEventsRes;
 import com.moonligh.report.api.res.FieldConfidence;
@@ -62,11 +60,13 @@ public class ReportParseService {
     private final ParserRegistry registry;
     private final ReportProperties properties;
     private final ReportRuleService rules;
+    private final IndicatorDtoAssembler assembler;
     private final ObjectMapper json = new ObjectMapper();
 
     public ReportParseService(
             ReportJobStore jobs, ReportParseStore parses, ParserRegistry registry, ReportProperties properties,
-            ReportRuleService rules) {
+            ReportRuleService rules, IndicatorDtoAssembler assembler) {
+        this.assembler = assembler;
         this.jobs = jobs;
         this.parses = parses;
         this.registry = registry;
@@ -126,6 +126,8 @@ public class ReportParseService {
         if (!StringUtils.hasText(job.sourceText())) {
             throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "无可重解析的原文");
         }
+        // 新一代：旧 epoch 的在途事件写入此后会被拒绝（job 行已被 lockById 锁住）。
+        jobs.bumpEpoch(reportId);
         ParseContext ctx = new ParseContext(
                 reportId, type, "reparse.lab.txt", "text/plain", job.sourceText().getBytes(StandardCharsets.UTF_8));
         ReportParser parser = registry.find(ctx)
@@ -150,7 +152,7 @@ public class ReportParseService {
         Optional<ReportRuleService.RuleView> view = rules.view(reportId, parse.parseVersion());
         if (view.isEmpty()) {
             // 该版本未执行规则：不得视为安全，默认阻断归档。
-            List<IndicatorDto> all = parses.listIndicators(parse.id()).stream().map(this::toDto).toList();
+            List<IndicatorDto> all = assembler.forParse(parse.id());
             return new ReportDetailRes(
                     reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
                     parse.parseConfidence(), all, null, null, List.of(), List.of(), true, false, null, null);
@@ -160,7 +162,7 @@ public class ReportParseService {
         boolean conflict = IdentityStatus.CONFLICT.name().equals(v.identityCheck().status());
         List<IndicatorDto> indicators = conflict
                 ? List.of()
-                : parses.listIndicators(parse.id()).stream().map(this::toDto).toList();
+                : assembler.forParse(parse.id());
         return new ReportDetailRes(
                 reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
                 parse.parseConfidence(), indicators, v.identityCheck(), v.criticalCoverage(), v.abnormals(),
@@ -289,36 +291,4 @@ public class ReportParseService {
                 indicatorId, ev.pageIndex(), ev.rawText(), regionJson);
     }
 
-    private IndicatorDto toDto(ReportIndicatorRow r) {
-        FieldConfidence conf = new FieldConfidence(
-                r.confOcr(), r.confStructure(), r.confExtraction(), r.confNormalization(),
-                r.confName(), r.confValue(), r.confUnit(), r.confRefRange());
-        SourceEvidence evidence = parses.findEvidence(r.id())
-                .map(e -> new SourceEvidence(e.pageIndex(), e.rawText(), readRegion(e.regionJson())))
-                .orElse(null);
-        return new IndicatorDto(
-                r.id(), r.rawName(), r.rawValue(), r.rawUnit(), r.canonicalCode(), r.specimenType(),
-                stripScale(r.normalizedValue()), r.normalizedUnit(), r.normalizationStatus(),
-                stripScale(r.refLow()), stripScale(r.refHigh()), conf, evidence);
-    }
-
-    private BoundingBox readRegion(String regionJson) {
-        if (!StringUtils.hasText(regionJson)) {
-            return null;
-        }
-        try {
-            return json.readValue(regionJson, BoundingBox.class);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    /** DECIMAL(20,6) 读回带尾零，对外去掉以保持数值干净（86.000000 → 86）。 */
-    private static BigDecimal stripScale(BigDecimal v) {
-        if (v == null) {
-            return null;
-        }
-        BigDecimal s = v.stripTrailingZeros();
-        return s.scale() < 0 ? s.setScale(0) : s;
-    }
 }
