@@ -1,0 +1,24 @@
+{
+  "docId": "doc-k-guide",
+  "title": "血钾结果阅读要点（内置样例）",
+  "kbVersion": "kb-lab-min-v1",
+  "status": "PUBLISHED",
+  "authorityLevel": "A",
+  "url": "https://kb.example.invalid/lab-min/doc-k-guide",
+  "effectiveFrom": "2020-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "chunks": [
+    {
+      "chunkId": "chunk-k-1",
+      "content": "血钾高于参考范围时，应结合复查结果与临床情况由医生评估；达到危急值水平需要尽快联系医生。",
+      "indicatorCode": "K",
+      "specialty": "LAB"
+    },
+    {
+      "chunkId": "chunk-k-2",
+      "content": "血钾低于参考范围时，请向医生说明近期饮食与用药情况，由医生判断是否需要复查。",
+      "indicatorCode": "K",
+      "specialty": "LAB"
+    }
+  ]
+}

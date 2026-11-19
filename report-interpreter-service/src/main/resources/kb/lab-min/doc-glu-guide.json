@@ -1,0 +1,18 @@
+{
+  "docId": "doc-glu-guide",
+  "title": "血糖结果阅读要点（内置样例）",
+  "kbVersion": "kb-lab-min-v1",
+  "status": "PUBLISHED",
+  "authorityLevel": "A",
+  "url": "https://kb.example.invalid/lab-min/doc-glu-guide",
+  "effectiveFrom": "2020-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "chunks": [
+    {
+      "chunkId": "chunk-glu-1",
+      "content": "血糖高于参考范围时，请由医生结合复查与其他检查综合评估，单次结果不能说明长期情况。",
+      "indicatorCode": "GLU",
+      "specialty": "LAB"
+    }
+  ]
+}

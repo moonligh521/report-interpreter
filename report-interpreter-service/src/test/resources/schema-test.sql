@@ -131,3 +131,64 @@ CREATE TABLE IF NOT EXISTS report_rule_summary (
   created_at              TIMESTAMP(3) NOT NULL,
   PRIMARY KEY (report_id, parse_version)
 );
+
+CREATE TABLE IF NOT EXISTS report_kb_document (
+  doc_id           VARCHAR(64)  NOT NULL PRIMARY KEY,
+  title            VARCHAR(256) NOT NULL,
+  kb_version       VARCHAR(32)  NOT NULL,
+  status           VARCHAR(16)  NOT NULL,
+  authority_level  VARCHAR(16)  NOT NULL,
+  url              VARCHAR(512),
+  effective_from   TIMESTAMP(3) NOT NULL,
+  effective_to     TIMESTAMP(3),
+  created_at       TIMESTAMP(3) NOT NULL,
+  updated_at       TIMESTAMP(3) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS report_kb_chunk (
+  chunk_id         VARCHAR(64)  NOT NULL PRIMARY KEY,
+  doc_id           VARCHAR(64)  NOT NULL,
+  content          VARCHAR(2000) NOT NULL,
+  title            VARCHAR(256),
+  indicator_code   VARCHAR(32),
+  specialty        VARCHAR(32),
+  url              VARCHAR(512)
+);
+
+CREATE TABLE IF NOT EXISTS report_interpretation (
+  interpretation_id  VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id          VARCHAR(64)  NOT NULL,
+  parse_version      INT          NOT NULL,
+  idempotency_key    VARCHAR(64)  NOT NULL,
+  status             VARCHAR(32)  NOT NULL,
+  result_code        INT,
+  kb_version         VARCHAR(32)  NOT NULL,
+  rule_version       VARCHAR(32)  NOT NULL,
+  prompt_version     VARCHAR(32)  NOT NULL,
+  parser_version     VARCHAR(32)  NOT NULL,
+  schema_version     VARCHAR(32)  NOT NULL,
+  created_at         TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_interpretation_idem UNIQUE (report_id, idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_interpretation_block (
+  id                 VARCHAR(64)   NOT NULL PRIMARY KEY,
+  interpretation_id  VARCHAR(64)   NOT NULL,
+  seq                INT           NOT NULL,
+  block_id           VARCHAR(64)   NOT NULL,
+  claim_type         VARCHAR(32)   NOT NULL,
+  content            VARCHAR(2000) NOT NULL,
+  evidence_ids       VARCHAR(1000),
+  validation_status  VARCHAR(32)   NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS report_interpretation_evidence (
+  id                 VARCHAR(64)   NOT NULL PRIMARY KEY,
+  interpretation_id  VARCHAR(64)   NOT NULL,
+  evidence_id        VARCHAR(80)   NOT NULL,
+  doc_id             VARCHAR(64)   NOT NULL,
+  title              VARCHAR(256),
+  snippet            VARCHAR(1000),
+  url                VARCHAR(512),
+  CONSTRAINT uk_interpretation_evidence UNIQUE (interpretation_id, evidence_id)
+);

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportInterpretationMapper">
+
+    <sql id="cols">
+        interpretation_id AS interpretationId, report_id AS reportId, parse_version AS parseVersion,
+        idempotency_key AS idempotencyKey, status, result_code AS resultCode,
+        kb_version AS kbVersion, rule_version AS ruleVersion, prompt_version AS promptVersion,
+        parser_version AS parserVersion, schema_version AS schemaVersion, created_at AS createdAt
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_interpretation
+        (interpretation_id, report_id, parse_version, idempotency_key, status, result_code,
+         kb_version, rule_version, prompt_version, parser_version, schema_version, created_at)
+        VALUES
+        (#{interpretationId}, #{reportId}, #{parseVersion}, #{idempotencyKey}, #{status}, #{resultCode},
+         #{kbVersion}, #{ruleVersion}, #{promptVersion}, #{parserVersion}, #{schemaVersion},
+         CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findById" resultType="com.moonligh.report.infrastructure.persistence.ReportInterpretationRow">
+        SELECT <include refid="cols"/>
+        FROM report_interpretation
+        WHERE interpretation_id = #{interpretationId}
+    </select>
+
+    <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportInterpretationRow">
+        SELECT <include refid="cols"/>
+        FROM report_interpretation
+        WHERE report_id = #{reportId} AND idempotency_key = #{idempotencyKey}
+    </select>
+
+    <select id="findLatestByReport" resultType="com.moonligh.report.infrastructure.persistence.ReportInterpretationRow">
+        SELECT <include refid="cols"/>
+        FROM report_interpretation
+        WHERE report_id = #{reportId}
+        ORDER BY created_at DESC, interpretation_id DESC
+        LIMIT 1
+    </select>
+
+</mapper>
