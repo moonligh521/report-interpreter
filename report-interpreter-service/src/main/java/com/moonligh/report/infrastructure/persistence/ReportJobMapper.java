@@ -10,6 +10,11 @@ public interface ReportJobMapper {
 
     ReportJobRow findById(@Param("reportId") String reportId);
 
+    /** 重解析时锁行，串行化 parseVersion 分配。 */
+    ReportJobRow lockById(@Param("reportId") String reportId);
+
     ReportJobRow findByIdempotency(
             @Param("accountId") String accountId, @Param("idempotencyKey") String idempotencyKey);
+
+    int updateStatus(@Param("reportId") String reportId, @Param("status") String status);
 }

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportParseResultMapper">
+
+    <sql id="cols">
+        id, report_id AS reportId, parse_version AS parseVersion, active,
+        report_type AS reportType, parse_confidence AS parseConfidence, status,
+        request_key AS requestKey
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_parse_result
+        (id, report_id, parse_version, active, report_type, parse_confidence, status, request_key,
+         created_at, updated_at)
+        VALUES (#{id}, #{reportId}, #{parseVersion}, #{active}, #{reportType}, #{parseConfidence}, #{status},
+                #{requestKey}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <update id="deactivatePrevious">
+        UPDATE report_parse_result SET active = 0, updated_at = CURRENT_TIMESTAMP(3)
+        WHERE report_id = #{reportId} AND active = 1
+    </update>
+
+    <select id="findActive" resultType="com.moonligh.report.infrastructure.persistence.ReportParseResultRow">
+        SELECT <include refid="cols"/>
+        FROM report_parse_result WHERE report_id = #{reportId} AND active = 1
+    </select>
+
+    <select id="findByRequestKey" resultType="com.moonligh.report.infrastructure.persistence.ReportParseResultRow">
+        SELECT <include refid="cols"/>
+        FROM report_parse_result WHERE report_id = #{reportId} AND request_key = #{requestKey}
+    </select>
+
+    <select id="maxVersion" resultType="int">
+        SELECT COALESCE(MAX(parse_version), 0) FROM report_parse_result WHERE report_id = #{reportId}
+    </select>
+
+</mapper>

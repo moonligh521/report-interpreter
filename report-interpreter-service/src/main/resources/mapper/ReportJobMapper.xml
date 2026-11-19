@@ -2,38 +2,54 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.moonligh.report.infrastructure.persistence.ReportJobMapper">
 
+    <sql id="cols">
+        report_id AS reportId,
+        account_id AS accountId,
+        patient_id AS patientId,
+        idempotency_key AS idempotencyKey,
+        status,
+        epoch,
+        report_type AS reportType,
+        request_hash AS requestHash,
+        source_text AS sourceText,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+    </sql>
+
     <insert id="insert">
         INSERT INTO report_job
-        (report_id, account_id, patient_id, idempotency_key, status, epoch, created_at, updated_at)
+        (report_id, account_id, patient_id, idempotency_key, status, epoch,
+         report_type, request_hash, source_text, created_at, updated_at)
         VALUES
         (#{reportId}, #{accountId}, #{patientId}, #{idempotencyKey}, #{status}, #{epoch},
+         #{reportType}, #{requestHash}, #{sourceText},
          CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     </insert>
 
     <select id="findById" resultType="com.moonligh.report.infrastructure.persistence.ReportJobRow">
-        SELECT report_id AS reportId,
-               account_id AS accountId,
-               patient_id AS patientId,
-               idempotency_key AS idempotencyKey,
-               status,
-               epoch,
-               created_at AS createdAt,
-               updated_at AS updatedAt
+        SELECT <include refid="cols"/>
         FROM report_job
         WHERE report_id = #{reportId}
     </select>
 
+    <select id="lockById" resultType="com.moonligh.report.infrastructure.persistence.ReportJobRow">
+        SELECT <include refid="cols"/>
+        FROM report_job
+        WHERE report_id = #{reportId}
+        FOR UPDATE
+    </select>
+
     <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportJobRow">
-        SELECT report_id AS reportId,
-               account_id AS accountId,
-               patient_id AS patientId,
-               idempotency_key AS idempotencyKey,
-               status,
-               epoch,
-               created_at AS createdAt,
-               updated_at AS updatedAt
+        SELECT <include refid="cols"/>
         FROM report_job
         WHERE account_id = #{accountId}
           AND idempotency_key = #{idempotencyKey}
     </select>
+
+    <update id="updateStatus">
+        UPDATE report_job
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP(3)
+        WHERE report_id = #{reportId}
+    </update>
+
 </mapper>

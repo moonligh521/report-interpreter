@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportSourceEvidenceMapper">
+
+    <insert id="insert">
+        INSERT INTO report_source_evidence (id, indicator_id, page_index, raw_text, region_json)
+        VALUES (#{id}, #{indicatorId}, #{pageIndex}, #{rawText}, #{regionJson})
+    </insert>
+
+    <select id="findByIndicator" resultType="com.moonligh.report.infrastructure.persistence.ReportSourceEvidenceRow">
+        SELECT id, indicator_id AS indicatorId, page_index AS pageIndex,
+               raw_text AS rawText, region_json AS regionJson
+        FROM report_source_evidence WHERE indicator_id = #{indicatorId}
+    </select>
+
+</mapper>
