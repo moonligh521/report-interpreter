@@ -1,6 +1,7 @@
 package com.moonligh.report.infrastructure.persistence;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 
 /**
  * report_indicator 行映射：raw_* 与 normalized_* 分列存储。
@@ -27,5 +28,7 @@ public record ReportIndicatorRow(
         double confName,
         double confValue,
         double confUnit,
-        double confRefRange) {
+        double confRefRange,
+        String subReportId,
+        Instant reportTime) {
 }

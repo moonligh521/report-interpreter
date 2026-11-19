@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-19
+
+### Added
+
+- P1 多类型文本夹具解析：`CHECKUP_BOOK` / `ECG_REPORT` / `US_REPORT`（仍拒绝 `IMAGING_FILM` 等不支持类型）。
+- 详情结构增量：`SubReportDto` / `SectionDto` / `FindingDto` / `AssessmentDto`；指标可选 `subReportId` / `reportTime`。
+- 追问 API：`POST /api/report/reports/{reportId}/questions`（解析结果 + Guard/Validator；改数拦截 4107）。
+- 危急已读确认：`POST /api/report/reports/{reportId}/critical-events/{eventId}/ack`（仅 `ACCEPTED`→`ACKNOWLEDGED`）。
+- 人工修订与复核结案：`POST /internal/report/corrections`、`POST /internal/report/reviews/{id}/resolve`。
+
+### Notes
+
+- `0.2.0` 为 **P1 技术能力**（多类型与人工协作），不等于临床放行。
+
 ## [0.1.0] - 2026-11-19
 
 ### Added

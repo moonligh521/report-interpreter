@@ -1,5 +1,6 @@
 package com.moonligh.report.controller;
 
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -8,12 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.moonligh.consult.framework.Result;
 import com.moonligh.report.api.req.CreateReviewReq;
+import com.moonligh.report.api.req.ResolveReviewReq;
 import com.moonligh.report.api.res.CreateReviewRes;
+import com.moonligh.report.api.res.ResolveReviewRes;
 import com.moonligh.report.common.IdempotencyKeyFilter;
 import com.moonligh.report.service.ReviewService;
 
 /**
- * 内部接口：创建人工复核任务。鉴权由 /internal/** 内部令牌过滤器负责。
+ * 内部接口：创建 / 结案人工复核任务。鉴权由 /internal/** 内部令牌过滤器负责。
  */
 @RestController
 @RequestMapping("/internal/report/reviews")
@@ -30,5 +33,13 @@ public class InternalReviewController {
             @RequestHeader(value = IdempotencyKeyFilter.HEADER, required = false) String idempotencyKey,
             @RequestBody CreateReviewReq req) {
         return Result.ok(reviews.create(req, idempotencyKey));
+    }
+
+    @PostMapping("/{id}/resolve")
+    public Result<ResolveReviewRes> resolve(
+            @PathVariable("id") String reviewTaskId,
+            @RequestHeader(value = IdempotencyKeyFilter.HEADER, required = false) String idempotencyKey,
+            @RequestBody ResolveReviewReq req) {
+        return Result.ok(reviews.resolve(reviewTaskId, req, idempotencyKey));
     }
 }

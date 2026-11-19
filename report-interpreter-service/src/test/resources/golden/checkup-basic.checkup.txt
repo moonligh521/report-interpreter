@@ -1,0 +1,5 @@
+REPORT_TYPE=CHECKUP_BOOK
+SUB|sub-blood|血常规|2024-01-10T08:00:00Z|0
+SUB|sub-urine|尿常规|2024-01-11T09:30:00Z|1
+INDICATOR|sub-blood|ALT|86|U/L|7|40|ALT 86 U/L 7-40|0
+INDICATOR|sub-urine|GLU|5.2|mmol/L|3.9|6.1|尿糖 5.2 mmol/L|1

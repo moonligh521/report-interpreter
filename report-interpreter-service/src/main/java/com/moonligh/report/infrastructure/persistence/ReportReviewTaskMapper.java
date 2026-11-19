@@ -11,4 +11,6 @@ public interface ReportReviewTaskMapper {
     ReportReviewTaskRow findByIdempotency(@Param("idempotencyKey") String idempotencyKey);
 
     ReportReviewTaskRow findById(@Param("reviewTaskId") String reviewTaskId);
+
+    int updateStatus(@Param("reviewTaskId") String reviewTaskId, @Param("status") String status);
 }

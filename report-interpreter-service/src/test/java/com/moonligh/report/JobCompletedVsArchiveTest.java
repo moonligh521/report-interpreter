@@ -139,7 +139,7 @@ class JobCompletedVsArchiveTest {
         criticalStore.updateOutbox(new CriticalNotificationOutboxRow(
                 accepted.outboxId(), accepted.eventId(), NotificationStatus.ACKNOWLEDGED.name(),
                 accepted.deliveryChannel(), accepted.idempotencyKey(), accepted.attemptCount(), null, null,
-                accepted.deliveredAt()));
+                accepted.deliveredAt(), Instant.now()));
 
         JsonNode life = lifecycle(account, reportId);
         assertEquals("READ", life.path("criticalReadStatus").asText());

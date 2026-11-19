@@ -51,7 +51,7 @@ public final class CriticalNotificationManager {
         NotificationStatus initial = deliverable ? NotificationStatus.PENDING : NotificationStatus.PENDING_REVIEW;
         CriticalNotificationOutboxRow outbox = new CriticalNotificationOutboxRow(
                 "obx_" + UUID.randomUUID().toString().replace("-", ""), eventId, initial.name(),
-                DEFAULT_CHANNEL, "notify:" + key + ":" + DEFAULT_CHANNEL, 0, null, null, null);
+                DEFAULT_CHANNEL, "notify:" + key + ":" + DEFAULT_CHANNEL, 0, null, null, null, null);
         store.insertOutbox(outbox);
         return new RegisteredCriticalEvent(event, outbox, true);
     }
@@ -59,7 +59,19 @@ public final class CriticalNotificationManager {
     /** 人工确认后放行：PENDING_REVIEW → PENDING。 */
     public CriticalNotificationOutboxRow releaseAfterReview(String outboxId) {
         CriticalNotificationOutboxRow row = require(outboxId);
-        return save(row, NotificationStatus.PENDING, row.attemptCount(), null, row.lastErrorCode(), null);
+        return save(row, NotificationStatus.PENDING, row.attemptCount(), null, row.lastErrorCode(), null,
+                row.acknowledgedAt());
+    }
+
+    /**
+     * 患者端已读确认：仅 ACCEPTED → ACKNOWLEDGED（M-R4）。不等于医院危急制度完成。
+     */
+    public CriticalNotificationOutboxRow acknowledge(String eventId, Instant acknowledgedAt) {
+        CriticalNotificationOutboxRow row = store.findOutboxByEvent(eventId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PARAM_INVALID, "通知记录不存在"));
+        Instant at = acknowledgedAt == null ? Instant.now() : acknowledgedAt;
+        return save(row, NotificationStatus.ACKNOWLEDGED, row.attemptCount(), null, row.lastErrorCode(),
+                row.deliveredAt(), at);
     }
 
     /**
@@ -87,22 +99,27 @@ public final class CriticalNotificationManager {
         CriticalNotificationOutboxRow sending = row;
         if (current == NotificationStatus.FAILED) {
             // FAILED 且已到期：先回到 RETRYING 再发送，保持状态机合法。
-            sending = save(sending, NotificationStatus.RETRYING, row.attemptCount(), now, row.lastErrorCode(), null);
+            sending = save(sending, NotificationStatus.RETRYING, row.attemptCount(), now, row.lastErrorCode(), null,
+                    row.acknowledgedAt());
         }
-        sending = save(sending, NotificationStatus.SENDING, sending.attemptCount(), null, sending.lastErrorCode(), null);
+        sending = save(sending, NotificationStatus.SENDING, sending.attemptCount(), null, sending.lastErrorCode(), null,
+                sending.acknowledgedAt());
         DeliveryResult result = sender.send(new CriticalNotificationMessage(
                 sending.outboxId(), event.eventId(), event.reportId(), event.canonicalCode(),
                 event.criticalLevel(), sending.deliveryChannel(), sending.idempotencyKey()));
         int attempts = sending.attemptCount() + 1;
         if (result.accepted()) {
-            return save(sending, NotificationStatus.ACCEPTED, attempts, null, null, now);
+            return save(sending, NotificationStatus.ACCEPTED, attempts, null, null, now, sending.acknowledgedAt());
         }
         CriticalNotificationOutboxRow failed =
-                save(sending, NotificationStatus.FAILED, attempts, null, result.errorCode(), null);
+                save(sending, NotificationStatus.FAILED, attempts, null, result.errorCode(), null,
+                        sending.acknowledgedAt());
         if (attempts >= maxAttempts) {
-            return save(failed, NotificationStatus.ESCALATED, attempts, null, result.errorCode(), null);
+            return save(failed, NotificationStatus.ESCALATED, attempts, null, result.errorCode(), null,
+                    failed.acknowledgedAt());
         }
-        return save(failed, NotificationStatus.RETRYING, attempts, now.plus(backoff(attempts)), result.errorCode(), null);
+        return save(failed, NotificationStatus.RETRYING, attempts, now.plus(backoff(attempts)), result.errorCode(),
+                null, failed.acknowledgedAt());
     }
 
     /** 第 n 次失败后的退避：30s * 2^(n-1)，封顶 1 小时。 */
@@ -126,14 +143,14 @@ public final class CriticalNotificationManager {
     /** 校验迁移合法后落库并返回新行。 */
     private CriticalNotificationOutboxRow save(
             CriticalNotificationOutboxRow row, NotificationStatus target, int attempts,
-            Instant nextRetryAt, String lastErrorCode, Instant deliveredAt) {
+            Instant nextRetryAt, String lastErrorCode, Instant deliveredAt, Instant acknowledgedAt) {
         NotificationStatus from = NotificationStatus.valueOf(row.notificationStatus());
         if (!from.canTransitionTo(target)) {
             throw new IllegalStateException("非法通知状态迁移：" + from + " -> " + target);
         }
         CriticalNotificationOutboxRow updated = new CriticalNotificationOutboxRow(
                 row.outboxId(), row.eventId(), target.name(), row.deliveryChannel(), row.idempotencyKey(),
-                attempts, nextRetryAt, lastErrorCode, deliveredAt);
+                attempts, nextRetryAt, lastErrorCode, deliveredAt, acknowledgedAt);
         store.updateOutbox(updated);
         return updated;
     }

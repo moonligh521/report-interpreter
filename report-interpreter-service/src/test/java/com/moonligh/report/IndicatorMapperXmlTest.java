@@ -50,10 +50,10 @@ class IndicatorMapperXmlTest {
     @Test
     void roundTripKeepsRawAndNormalizedSeparate() {
         String reportId = "rpt-map-1";
-        parseMapper.insert(new ReportParseResultRow("prs-1", reportId, 1, true, "LAB_PANEL", 0.95, "PARSED", null));
+        parseMapper.insert(new ReportParseResultRow("prs-1", reportId, 1, true, "LAB_PANEL", 0.95, "PARSED", null, null));
         parseMapper.deactivatePrevious(reportId);
         assertEquals(null, parseMapper.findActive(reportId));
-        parseMapper.insert(new ReportParseResultRow("prs-2", reportId, 2, true, "LAB_PANEL", 0.9, "PARSED", "k2"));
+        parseMapper.insert(new ReportParseResultRow("prs-2", reportId, 2, true, "LAB_PANEL", 0.9, "PARSED", "k2", null));
         assertEquals(2, parseMapper.findActive(reportId).parseVersion());
         assertEquals(2, parseMapper.maxVersion(reportId));
         assertEquals("prs-2", parseMapper.findByRequestKey(reportId, "k2").id());
@@ -61,7 +61,7 @@ class IndicatorMapperXmlTest {
         indicatorMapper.batchInsert(List.of(new ReportIndicatorRow(
                 "ind-1", "prs-2", reportId, 2, "GLU", "90", "mg/dL", "GLU", "SERUM",
                 new BigDecimal("4.995"), "mmol/L", "CONVERTED", new BigDecimal("3.9"), new BigDecimal("6.1"),
-                1.0, 0.95, 0.95, 0.9, 0.98, 0.98, 0.98, 0.98)));
+                1.0, 0.95, 0.95, 0.9, 0.98, 0.98, 0.98, 0.98, null, null)));
         ReportIndicatorRow row = indicatorMapper.listByParseResult("prs-2").get(0);
         assertEquals("90", row.rawValue());
         assertEquals("mg/dL", row.rawUnit());

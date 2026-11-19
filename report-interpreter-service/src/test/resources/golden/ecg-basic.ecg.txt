@@ -1,0 +1,4 @@
+REPORT_TYPE=ECG_REPORT
+FINDING|f1|窦性心律，心率 72 bpm|0
+FINDING|f2|ST-T 未见明显异常|0
+ASSESSMENT|a1|心电图大致正常

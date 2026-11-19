@@ -26,4 +26,10 @@
         WHERE review_task_id = #{reviewTaskId}
     </select>
 
+    <update id="updateStatus">
+        UPDATE report_review_task
+        SET status = #{status}
+        WHERE review_task_id = #{reviewTaskId}
+    </update>
+
 </mapper>

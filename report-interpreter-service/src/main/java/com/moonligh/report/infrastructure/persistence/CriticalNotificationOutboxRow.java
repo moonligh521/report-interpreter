@@ -14,5 +14,6 @@ public record CriticalNotificationOutboxRow(
         int attemptCount,
         Instant nextRetryAt,
         String lastErrorCode,
-        Instant deliveredAt) {
+        Instant deliveredAt,
+        Instant acknowledgedAt) {
 }

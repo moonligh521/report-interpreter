@@ -144,18 +144,18 @@ public class ReportParseService {
         String jobType = job.reportType() == null ? UNKNOWN_TYPE : job.reportType();
         Optional<ReportParseResultRow> active = parses.findActive(reportId);
         if (active.isEmpty()) {
-            return new ReportDetailRes(
-                    reportId, jobType, job.status(), 0, false, 0.0, List.of(),
-                    null, null, List.of(), List.of(), true, false, null, null);
+            return emptyDetail(reportId, jobType, job.status());
         }
         ReportParseResultRow parse = active.get();
+        StructureJson.StructurePayload structure = StructureJson.read(parse.structureJson());
         Optional<ReportRuleService.RuleView> view = rules.view(reportId, parse.parseVersion());
         if (view.isEmpty()) {
             // 该版本未执行规则：不得视为安全，默认阻断归档。
             List<IndicatorDto> all = assembler.forParse(parse.id());
             return new ReportDetailRes(
                     reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
-                    parse.parseConfidence(), all, null, null, List.of(), List.of(), true, false, null, null);
+                    parse.parseConfidence(), all, null, null, List.of(), List.of(), true, false, null, null,
+                    structure.toSubReportDtos(), structure.sections(), structure.findings(), structure.assessments());
         }
         ReportRuleService.RuleView v = view.get();
         // 身份冲突：报告可能属于他人，不向调用方返回指标明细。
@@ -163,10 +163,12 @@ public class ReportParseService {
         List<IndicatorDto> indicators = conflict
                 ? List.of()
                 : assembler.forParse(parse.id());
+        StructureJson.StructurePayload exposed = conflict ? StructureJson.StructurePayload.empty() : structure;
         return new ReportDetailRes(
                 reportId, parse.reportType(), job.status(), parse.parseVersion(), parse.active(),
                 parse.parseConfidence(), indicators, v.identityCheck(), v.criticalCoverage(), v.abnormals(),
-                v.criticalHits(), v.archiveBlocked(), v.safeNormalAllowed(), v.blockCode(), v.ruleVersion());
+                v.criticalHits(), v.archiveBlocked(), v.safeNormalAllowed(), v.blockCode(), v.ruleVersion(),
+                exposed.toSubReportDtos(), exposed.sections(), exposed.findings(), exposed.assessments());
     }
 
     /** 报告的危急事件列表；仅报告所属账号可读。 */
@@ -193,7 +195,7 @@ public class ReportParseService {
         String parseId = "prs_" + UUID.randomUUID().toString().replace("-", "");
         parses.insertParseResult(new ReportParseResultRow(
                 parseId, reportId, version, true, result.reportType().name(),
-                result.parseConfidence(), STATUS_PARSED, requestKey));
+                result.parseConfidence(), STATUS_PARSED, requestKey, StructureJson.write(result.structure())));
 
         List<ReportIndicatorRow> rows = new ArrayList<>();
         List<ReportSourceEvidenceRow> evidences = new ArrayList<>();
@@ -201,7 +203,9 @@ public class ReportParseService {
         for (ParsedIndicator ind : result.indicators()) {
             String indicatorId = "ind_" + UUID.randomUUID().toString().replace("-", "");
             rows.add(toRow(indicatorId, parseId, reportId, version, ind));
-            evidences.add(toEvidenceRow(indicatorId, ind.evidence()));
+            if (ind.evidence() != null) {
+                evidences.add(toEvidenceRow(indicatorId, ind.evidence()));
+            }
             identified.add(new IdentifiedIndicator(indicatorId, ind));
         }
         parses.insertIndicators(rows);
@@ -210,6 +214,13 @@ public class ReportParseService {
         // PARSED 之后自动执行规则：身份 / 覆盖 / 参考区间 / 危急，状态推进到规则出口。
         SafetyVerdict verdict = rules.run(reportId, version, result, identified, expectedName);
         return new ParseOutcome(version, verdict);
+    }
+
+    private static ReportDetailRes emptyDetail(String reportId, String jobType, String status) {
+        return new ReportDetailRes(
+                reportId, jobType, status, 0, false, 0.0, List.of(),
+                null, null, List.of(), List.of(), true, false, null, null,
+                List.of(), List.of(), List.of(), List.of());
     }
 
     private CreateReportRes replay(ReportJobRow existing, String hash) {
@@ -224,10 +235,12 @@ public class ReportParseService {
         if (!StringUtils.hasText(raw)) {
             return ReportType.LAB_PANEL;
         }
-        if (ReportType.LAB_PANEL.name().equals(raw.strip().toUpperCase(Locale.ROOT))) {
-            return ReportType.LAB_PANEL;
+        String normalized = raw.strip().toUpperCase(Locale.ROOT);
+        try {
+            return ReportType.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(ErrorCode.REPORT_TYPE_UNSUPPORTED, "不支持的报告类型");
         }
-        throw new BusinessException(ErrorCode.REPORT_TYPE_UNSUPPORTED, "仅支持 LAB_PANEL 报告");
     }
 
     private UploadGuard.Kind checkFile(UploadedFile file) {
@@ -274,7 +287,7 @@ public class ReportParseService {
                 i.rawName(), i.rawValue(), i.rawUnit(), i.canonicalCode(), i.specimenType(),
                 i.normalizedValue(), i.normalizedUnit(), i.normalizationStatus(), i.refLow(), i.refHigh(),
                 c.ocr(), c.structure(), c.extraction(), c.normalization(),
-                c.name(), c.value(), c.unit(), c.refRange());
+                c.name(), c.value(), c.unit(), c.refRange(), i.subReportId(), i.reportTime());
     }
 
     private ReportSourceEvidenceRow toEvidenceRow(String indicatorId, SourceEvidence ev) {

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportCorrectionMapper">
+
+    <insert id="insert">
+        INSERT INTO report_correction
+        (id, report_id, parse_version_base, new_parse_version, reviewer_id, patches_json,
+         idempotency_key, created_at)
+        VALUES
+        (#{id}, #{reportId}, #{parseVersionBase}, #{newParseVersion}, #{reviewerId}, #{patchesJson},
+         #{idempotencyKey}, CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportCorrectionRow">
+        SELECT id, report_id AS reportId, parse_version_base AS parseVersionBase,
+               new_parse_version AS newParseVersion, reviewer_id AS reviewerId,
+               patches_json AS patchesJson, idempotency_key AS idempotencyKey,
+               created_at AS createdAt
+        FROM report_correction
+        WHERE idempotency_key = #{idempotencyKey}
+    </select>
+
+</mapper>
