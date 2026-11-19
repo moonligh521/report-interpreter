@@ -18,5 +18,8 @@ public interface ReportJobStore {
 
     Optional<ReportJobRow> findByIdempotency(String accountId, String idempotencyKey);
 
+    /** 重解析开启新一代：epoch + 1。 */
+    void bumpEpoch(String reportId);
+
     void updateStatus(String reportId, String status);
 }

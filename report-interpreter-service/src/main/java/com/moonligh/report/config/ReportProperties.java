@@ -17,8 +17,14 @@ public class ReportProperties {
 
     private final Interpretation interpretation = new Interpretation();
 
+    private final Archive archive = new Archive();
+
     public Interpretation getInterpretation() {
         return interpretation;
+    }
+
+    public Archive getArchive() {
+        return archive;
     }
 
     public String getDisplayName() {
@@ -93,6 +99,21 @@ public class ReportProperties {
         public void setLabSpecialty(String labSpecialty) {
             this.labSpecialty = labSpecialty;
         }
+
+        public int getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(int maxAttempts) {
+            this.maxAttempts = maxAttempts;
+        }
+    }
+
+    /** report.archive.*：档案 Outbox（与危急通知 Outbox 分离）。 */
+    public static class Archive {
+
+        /** 单条档案最大投递次数，用尽后进入 DEAD，只能经补偿接口拉回。 */
+        private int maxAttempts = 5;
 
         public int getMaxAttempts() {
             return maxAttempts;

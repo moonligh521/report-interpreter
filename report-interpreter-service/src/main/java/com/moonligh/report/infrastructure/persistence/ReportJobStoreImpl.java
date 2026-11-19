@@ -36,6 +36,11 @@ public class ReportJobStoreImpl implements ReportJobStore {
     }
 
     @Override
+    public void bumpEpoch(String reportId) {
+        mapper.bumpEpoch(reportId);
+    }
+
+    @Override
     public void updateStatus(String reportId, String status) {
         mapper.updateStatus(reportId, status);
     }
