@@ -2,6 +2,7 @@ package com.moonligh.report.infrastructure.parser;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +28,8 @@ import com.moonligh.report.domain.parse.ReportType;
  * [PAGE_COUNT=N]                 可选，声明总页数
  * [FAILED_PAGES=1,2]             可选，解析失败页
  * [UNRECOGNIZED_REGIONS=a;b]     可选，未识别文本区
- * rawName|rawValue|rawUnit|refLow|refHigh|rawText|pageIndex
+ * [SPECIMEN_TIME=ISO-8601]       可选，标本时间（趋势排序）
+ * rawName|rawValue|rawUnit|refLow|refHigh|rawText|pageIndex[|specimenType]
  * </pre>
  */
 @Component
@@ -38,6 +40,7 @@ public class LabPanelTextParser implements ReportParser {
     static final String PAGE_COUNT_PREFIX = "PAGE_COUNT=";
     static final String FAILED_PAGES_PREFIX = "FAILED_PAGES=";
     static final String UNRECOGNIZED_PREFIX = "UNRECOGNIZED_REGIONS=";
+    static final String SPECIMEN_TIME_PREFIX = "SPECIMEN_TIME=";
 
     @Override
     public boolean supports(ParseContext context) {
@@ -84,6 +87,7 @@ public class LabPanelTextParser implements ReportParser {
 
         private String patientName;
         private Integer totalPages;
+        private Instant specimenTime;
         private final List<Integer> failedPages = new ArrayList<>();
         private final List<String> regions = new ArrayList<>();
 
@@ -114,11 +118,20 @@ public class LabPanelTextParser implements ReportParser {
                 }
                 return true;
             }
+            if (line.startsWith(SPECIMEN_TIME_PREFIX)) {
+                String raw = line.substring(SPECIMEN_TIME_PREFIX.length()).strip();
+                try {
+                    specimenTime = Instant.parse(raw);
+                } catch (Exception e) {
+                    throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "SPECIMEN_TIME 不合法");
+                }
+                return true;
+            }
             return false;
         }
 
         ReportMeta build() {
-            return new ReportMeta(patientName, totalPages, failedPages, regions);
+            return new ReportMeta(patientName, totalPages, failedPages, regions, specimenTime);
         }
     }
 
@@ -145,11 +158,13 @@ public class LabPanelTextParser implements ReportParser {
         String rawText = f.length > 5 ? f[5].strip() : null;
         Integer pageIndex = f.length > 6 ? parsePage(f[6]) : null;
 
+        String specimenOverride = f.length > 7 && !f[7].isBlank() ? f[7].strip() : null;
         LabNormalizer.Outcome n = LabNormalizer.normalize(rawName, rawValue, rawUnit);
+        String specimen = specimenOverride != null ? specimenOverride : n.specimenType();
         FieldConfidence conf = confidence(n, rawUnit, refLow, refHigh);
         SourceEvidence evidence = new SourceEvidence(pageIndex, rawText, null);
         return new ParsedIndicator(
-                rawName, rawValue, rawUnit, n.canonicalCode(), n.specimenType(),
+                rawName, rawValue, rawUnit, n.canonicalCode(), specimen,
                 n.value(), n.unit(), n.status(), refLow, refHigh, conf, evidence);
     }
 

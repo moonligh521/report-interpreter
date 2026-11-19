@@ -5,15 +5,16 @@
     <sql id="cols">
         id, report_id AS reportId, parse_version AS parseVersion, active,
         report_type AS reportType, parse_confidence AS parseConfidence, status,
-        request_key AS requestKey, structure_json AS structureJson
+        request_key AS requestKey, structure_json AS structureJson,
+        specimen_time AS specimenTime
     </sql>
 
     <insert id="insert">
         INSERT INTO report_parse_result
         (id, report_id, parse_version, active, report_type, parse_confidence, status, request_key,
-         structure_json, created_at, updated_at)
+         structure_json, specimen_time, created_at, updated_at)
         VALUES (#{id}, #{reportId}, #{parseVersion}, #{active}, #{reportType}, #{parseConfidence}, #{status},
-                #{requestKey}, #{structureJson}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+                #{requestKey}, #{structureJson}, #{specimenTime}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     </insert>
 
     <update id="deactivatePrevious">

@@ -16,7 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.moonligh.consult.framework.ErrorCode;
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.domain.archive.ArchiveConsumer;
 import com.moonligh.report.domain.archive.ArchiveDeliveryResult;
 import com.moonligh.report.domain.archive.ArchiveGate;
@@ -140,11 +140,11 @@ class ArchiveBlockedByIdentityTest {
     @Test
     void outboxHoldingANonMatchedMessageIsNeverSentAndDiesImmediately() {
         String reportId = ReportTestSupport.uniq("rpt-arc-nm");
-        ArchiveOutboxMessage msg = new ArchiveOutboxMessage(
+        ArchiveOutboxMessageV2 msg = new ArchiveOutboxMessageV2(
                 "arc_" + ReportTestSupport.uniq("nm"), ArchiveOutboxManager.SCHEMA_VERSION, reportId, "p-1", 1,
-                "itp_nm", List.of(), "CONFLICT");
+                "itp_nm", List.of(), "CONFLICT", "LAB_PANEL", List.of(), null);
         ReportArchiveOutboxRow row = manager.enqueue(msg);
-        List<ArchiveOutboxMessage> sent = new ArrayList<>();
+        List<ArchiveOutboxMessageV2> sent = new ArrayList<>();
 
         ReportArchiveOutboxRow after = manager.dispatch(row.outboxId(), m -> {
             sent.add(m);
@@ -160,8 +160,9 @@ class ArchiveBlockedByIdentityTest {
     void consumerRejectsNonMatchedAndWritesNoRecord() {
         String eventId = "arc_" + ReportTestSupport.uniq("rej");
         for (String identity : List.of("CONFLICT", "MISSING")) {
-            ArchiveOutboxMessage msg = new ArchiveOutboxMessage(
-                    eventId, ArchiveOutboxManager.SCHEMA_VERSION, "rpt-rej", "p-1", 1, "itp_rej", List.of(), identity);
+            ArchiveOutboxMessageV2 msg = new ArchiveOutboxMessageV2(
+                    eventId, ArchiveOutboxManager.SCHEMA_VERSION, "rpt-rej", "p-1", 1, "itp_rej", List.of(), identity,
+                    "LAB_PANEL", List.of(), null);
             assertEquals(ArchiveConsumer.Outcome.REJECTED, consumer.consume(msg));
             assertEquals(false, consumer.deliver(msg).accepted());
         }

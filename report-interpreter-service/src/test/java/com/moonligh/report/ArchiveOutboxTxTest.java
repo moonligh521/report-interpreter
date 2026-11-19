@@ -19,7 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.common.PayloadJson;
 import com.moonligh.report.domain.archive.ArchiveOutboxStore;
 import com.moonligh.report.domain.event.ReportEventStore;
@@ -65,18 +65,20 @@ class ArchiveOutboxTxTest {
         ReportArchiveOutboxRow row = archiveStore.findByEventId("arc_" + interpretationId).orElseThrow();
         assertEquals("PENDING", row.status());
         assertEquals(0, row.attemptCount());
-        assertEquals("archive-schema-v1", row.schemaVersion());
+        assertEquals("2", row.schemaVersion());
 
-        ArchiveOutboxMessage msg = PayloadJson.read(row.payloadJson(), ArchiveOutboxMessage.class);
+        ArchiveOutboxMessageV2 msg = PayloadJson.read(row.payloadJson(), ArchiveOutboxMessageV2.class);
         assertEquals("arc_" + interpretationId, msg.eventId());
         assertEquals(reportId, msg.reportId());
         assertEquals("p-rules", msg.patientId());
         assertEquals(1, msg.parseVersion());
         assertEquals(interpretationId, msg.interpretationId());
         assertEquals("MATCHED", msg.identityStatus());
+        assertEquals("LAB_PANEL", msg.reportType());
         assertEquals(1, msg.indicators().size());
         assertEquals("ALT", msg.indicators().get(0).canonicalCode());
         assertNotNull(msg.indicators().get(0).evidence());
+        assertNotNull(msg.fhirHints());
     }
 
     @Test

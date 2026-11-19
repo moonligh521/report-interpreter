@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportTrendMapper">
+
+    <select id="listTrendPoints" resultType="com.moonligh.report.infrastructure.persistence.TrendPointRow">
+        SELECT i.report_id AS reportId, i.parse_version AS parseVersion,
+               i.normalized_value AS normalizedValue, i.normalized_unit AS normalizedUnit,
+               i.specimen_type AS specimenType, p.specimen_time AS specimenTime
+        FROM report_indicator i
+        INNER JOIN report_parse_result p ON p.id = i.parse_result_id AND p.active = 1
+        INNER JOIN report_job j ON j.report_id = i.report_id
+        WHERE j.patient_id = #{patientId}
+          AND j.account_id = #{accountId}
+          AND i.canonical_code = #{canonicalCode}
+          AND i.normalized_value IS NOT NULL
+          <if test="specimenType != null and specimenType != ''">
+              AND i.specimen_type = #{specimenType}
+          </if>
+          <if test="from != null">AND p.specimen_time &gt;= #{from}</if>
+          <if test="to != null">AND p.specimen_time &lt;= #{to}</if>
+        ORDER BY p.specimen_time ASC, i.report_id ASC
+    </select>
+
+</mapper>

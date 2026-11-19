@@ -25,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.api.req.CompensateReq;
 import com.moonligh.report.api.res.CompensateRes;
 import com.moonligh.report.api.res.CorrectionPayload;
@@ -91,6 +92,7 @@ class NoMapPayloadTest {
     void contractRecordsHaveNoMapComponents() {
         for (Class<?> c : List.of(
                 ReportSseEventRes.class, ReportEventsRes.class, ReportLifecycleRes.class, ArchiveOutboxMessage.class,
+                ArchiveOutboxMessageV2.class,
                 CompensateReq.class, CompensateRes.class, IndicatorSummary.class)) {
             assertNoMapComponents(c);
         }
@@ -139,8 +141,9 @@ class NoMapPayloadTest {
         }
         String archiveJson = jdbc.queryForObject(
                 "SELECT payload_json FROM report_archive_outbox WHERE report_id = ?", String.class, reportId);
-        ArchiveOutboxMessage msg = PayloadJson.read(archiveJson, ArchiveOutboxMessage.class);
+        ArchiveOutboxMessageV2 msg = PayloadJson.read(archiveJson, ArchiveOutboxMessageV2.class);
         assertEquals(reportId, msg.reportId());
+        assertEquals("2", msg.schemaVersion());
     }
 
     @Test

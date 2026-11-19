@@ -5,19 +5,19 @@ import java.util.UUID;
 
 import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.common.PayloadJson;
 import com.moonligh.report.domain.rule.IdentityStatus;
 import com.moonligh.report.infrastructure.persistence.ReportArchiveOutboxRow;
 
 /**
  * 档案 Outbox 驱动：入队（按 eventId 幂等）→ 投递（PENDING/FAILED → SUCCESS | FAILED | DEAD）→ 补偿（DEAD → PENDING）。
- * 事务由应用服务负责：入队必须与「解读完成」落库在同一事务里。
- * 日志与异常信息不带指标内容。
+ * schemaVersion=2；事务由应用服务负责。日志与异常信息不带指标内容。
  */
 public final class ArchiveOutboxManager {
 
-    public static final String SCHEMA_VERSION = "archive-schema-v1";
+    /** 档案 Outbox 载荷版本（T-R4）。 */
+    public static final String SCHEMA_VERSION = "2";
     public static final String ERR_IDENTITY = "IDENTITY_NOT_MATCHED";
     public static final String ERR_SENDER = "SENDER_ERROR";
 
@@ -30,7 +30,7 @@ public final class ArchiveOutboxManager {
     }
 
     /** 入队：同一 eventId 只落一行，重复入队返回已有行。 */
-    public ReportArchiveOutboxRow enqueue(ArchiveOutboxMessage message) {
+    public ReportArchiveOutboxRow enqueue(ArchiveOutboxMessageV2 message) {
         return store.findByEventId(message.eventId()).orElseGet(() -> {
             ReportArchiveOutboxRow row = new ReportArchiveOutboxRow(
                     "aob_" + UUID.randomUUID().toString().replace("-", ""), message.reportId(), message.eventId(),
@@ -55,7 +55,7 @@ public final class ArchiveOutboxManager {
         if (current != ArchiveStatus.PENDING && current != ArchiveStatus.FAILED) {
             throw new IllegalStateException("档案 Outbox 当前状态不可投递：" + current);
         }
-        ArchiveOutboxMessage message = PayloadJson.read(row.payloadJson(), ArchiveOutboxMessage.class);
+        ArchiveOutboxMessageV2 message = PayloadJson.read(row.payloadJson(), ArchiveOutboxMessageV2.class);
         int attempts = row.attemptCount() + 1;
         if (!IdentityStatus.MATCHED.name().equals(message.identityStatus())) {
             // 非 MATCHED 永不投递：直接终止，不占用重试。
@@ -101,7 +101,7 @@ public final class ArchiveOutboxManager {
         return save(row, ArchiveStatus.PENDING, 0, row.lastErrorCode());
     }
 
-    private ReportArchiveOutboxRow require(String outboxId) {
+    public ReportArchiveOutboxRow require(String outboxId) {
         return store.findById(outboxId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PARAM_INVALID, "档案 Outbox 不存在"));
     }

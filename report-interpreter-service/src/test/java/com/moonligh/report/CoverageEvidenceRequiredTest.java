@@ -59,12 +59,12 @@ class CoverageEvidenceRequiredTest {
     void checkerAlwaysAttachesEvidence() {
         CriticalCoverageChecker checker = new CriticalCoverageChecker();
         CriticalCoverageResult complete = checker.check(
-                List.of(ind("K", "K", "4.2", 0), ind("NA", "NA", "140", 1)), new ReportMeta(null, 2, List.of(), List.of()));
+                List.of(ind("K", "K", "4.2", 0), ind("NA", "NA", "140", 1)), new ReportMeta(null, 2, List.of(), List.of(), null));
         assertEquals(CoverageStatus.COMPLETE, complete.status());
         assertEquals(List.of(0, 1), complete.evidence().pagesProcessed());
 
         CriticalCoverageResult unknown = checker.check(
-                List.of(ind("K", "K", "4.2", 0)), new ReportMeta(null, 3, List.of(), List.of()));
+                List.of(ind("K", "K", "4.2", 0)), new ReportMeta(null, 3, List.of(), List.of(), null));
         assertEquals(CoverageStatus.UNKNOWN, unknown.status());
         assertEquals(List.of(0), unknown.evidence().pagesProcessed());
 

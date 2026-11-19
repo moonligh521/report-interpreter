@@ -50,10 +50,10 @@ class IndicatorMapperXmlTest {
     @Test
     void roundTripKeepsRawAndNormalizedSeparate() {
         String reportId = "rpt-map-1";
-        parseMapper.insert(new ReportParseResultRow("prs-1", reportId, 1, true, "LAB_PANEL", 0.95, "PARSED", null, null));
+        parseMapper.insert(new ReportParseResultRow("prs-1", reportId, 1, true, "LAB_PANEL", 0.95, "PARSED", null, null, null));
         parseMapper.deactivatePrevious(reportId);
         assertEquals(null, parseMapper.findActive(reportId));
-        parseMapper.insert(new ReportParseResultRow("prs-2", reportId, 2, true, "LAB_PANEL", 0.9, "PARSED", "k2", null));
+        parseMapper.insert(new ReportParseResultRow("prs-2", reportId, 2, true, "LAB_PANEL", 0.9, "PARSED", "k2", null, null));
         assertEquals(2, parseMapper.findActive(reportId).parseVersion());
         assertEquals(2, parseMapper.maxVersion(reportId));
         assertEquals("prs-2", parseMapper.findByRequestKey(reportId, "k2").id());

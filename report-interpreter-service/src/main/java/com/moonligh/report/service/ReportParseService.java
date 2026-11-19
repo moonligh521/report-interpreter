@@ -3,10 +3,12 @@ package com.moonligh.report.service;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -195,7 +197,8 @@ public class ReportParseService {
         String parseId = "prs_" + UUID.randomUUID().toString().replace("-", "");
         parses.insertParseResult(new ReportParseResultRow(
                 parseId, reportId, version, true, result.reportType().name(),
-                result.parseConfidence(), STATUS_PARSED, requestKey, StructureJson.write(result.structure())));
+                result.parseConfidence(), STATUS_PARSED, requestKey, StructureJson.write(result.structure()),
+                resolveSpecimenTime(result)));
 
         List<ReportIndicatorRow> rows = new ArrayList<>();
         List<ReportSourceEvidenceRow> evidences = new ArrayList<>();
@@ -214,6 +217,18 @@ public class ReportParseService {
         // PARSED 之后自动执行规则：身份 / 覆盖 / 参考区间 / 危急，状态推进到规则出口。
         SafetyVerdict verdict = rules.run(reportId, version, result, identified, expectedName);
         return new ParseOutcome(version, verdict);
+    }
+
+    /** 趋势排序时间：优先 meta.specimenTime，否则取指标 reportTime 最早值。 */
+    static Instant resolveSpecimenTime(ParseResult result) {
+        if (result.meta() != null && result.meta().specimenTime() != null) {
+            return result.meta().specimenTime();
+        }
+        return result.indicators().stream()
+                .map(ParsedIndicator::reportTime)
+                .filter(Objects::nonNull)
+                .min(Instant::compareTo)
+                .orElse(null);
     }
 
     private static ReportDetailRes emptyDetail(String reportId, String jobType, String status) {

@@ -47,7 +47,7 @@ class MapperXmlDeliveryTest {
     }
 
     private static ReportArchiveOutboxRow outboxRow(String id, String report, String eventId, String status) {
-        return new ReportArchiveOutboxRow(id, report, eventId, "archive-schema-v1", status, 0, null, "{}", null, null);
+        return new ReportArchiveOutboxRow(id, report, eventId, "2", status, 0, null, "{}", null, null);
     }
 
     @Test
@@ -119,7 +119,7 @@ class MapperXmlDeliveryTest {
         ReportArchiveOutboxRow found = outbox.findByEventId(ev);
         assertEquals(report + "-o1", found.outboxId());
         assertEquals("PENDING", found.status());
-        assertEquals("archive-schema-v1", found.schemaVersion());
+        assertEquals("2", found.schemaVersion());
         assertEquals(report + "-o1", outbox.findById(report + "-o1").outboxId());
         assertEquals(report + "-o1", outbox.findLatestByReport(report).outboxId());
         assertTrue(outbox.listDue(1000).stream().anyMatch(r -> r.outboxId().equals(report + "-o1")));

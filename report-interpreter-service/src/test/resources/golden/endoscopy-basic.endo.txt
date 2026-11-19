@@ -1,0 +1,5 @@
+REPORT_TYPE=ENDOSCOPY_REPORT
+SECTION|sec-stomach|胃
+FINDING|f1|sec-stomach|胃窦黏膜轻度充血
+FINDING|f2|sec-stomach|未见溃疡或肿物
+ASSESSMENT|a1|慢性浅表性胃炎（所见描述，非确诊）

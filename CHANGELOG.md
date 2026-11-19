@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+
+### Added
+
+- 历史趋势 API：`GET /api/report/patients/{patientId}/indicators/{canonicalCode}/trend`（可比性 T-R1/T-R2、固定免责声明 T-R3）。
+- `report_parse_result.specimen_time` 与解析落库接线（meta / 指标 `reportTime`）。
+- 报告类型：`DISCHARGE_SUMMARY` / `ENDOSCOPY_REPORT` 文本夹具解析（仍拒绝 `IMAGING_FILM` → 4101）。
+- 档案 Outbox schemaVersion=`2`：`ArchiveOutboxMessageV2`（`reportType` / `sections` / 可选 `FhirHints`）；`GET /internal/report/archive/outbox/{id}`。
+
+### Notes
+
+- `0.3.0` 为 **P2 技术能力**（趋势与档案深度字段），不等于临床放行。
+- `LoadSmokeIT` 仅为短并发冒烟，非正式压测门禁；clinical-record 真实联调仍经 Outbox，本仓不持有病情主数据。
+
 ## [0.2.0] - 2026-11-19
 
 ### Added
