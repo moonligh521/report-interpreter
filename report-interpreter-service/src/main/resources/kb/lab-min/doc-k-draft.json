@@ -1,0 +1,18 @@
+{
+  "docId": "doc-k-draft",
+  "title": "血钾草稿资料（未发布）",
+  "kbVersion": "kb-lab-min-v2-draft",
+  "status": "DRAFT",
+  "authorityLevel": "C",
+  "url": "https://kb.example.invalid/lab-min/doc-k-draft",
+  "effectiveFrom": "2020-01-01T00:00:00Z",
+  "effectiveTo": null,
+  "chunks": [
+    {
+      "chunkId": "chunk-k-draft-1",
+      "content": "草稿内容：未经审核的血钾说明，不得被检索或引用。",
+      "indicatorCode": "K",
+      "specialty": "LAB"
+    }
+  ]
+}

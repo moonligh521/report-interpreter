@@ -1,0 +1,39 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:report_interpreter;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-test.sql
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    arg-name-based-constructor-auto-mapping: true
+    jdbc-type-for-null: "NULL"
+
+consult:
+  auth:
+    jwt-secret: consult-dev-jwt-secret-key-32bytes!
+    internal-token: consult-internal
+    open-paths:
+      - /actuator/health
+      - /actuator/health/liveness
+      - /actuator/health/readiness
+    open-path-prefixes: []
+    staff-only-prefixes: []
+
+report:
+  display-name: report-interpreter-test
+  parse:
+    allow-text-fixture: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

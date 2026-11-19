@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportEventMapper">
+
+    <sql id="cols">
+        event_id AS eventId, report_id AS reportId, job_id AS jobId, sequence,
+        event_type AS eventType, epoch, payload_json AS payloadJson, created_at AS createdAt
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_event
+        (event_id, report_id, job_id, sequence, event_type, epoch, payload_json, created_at)
+        VALUES
+        (#{eventId}, #{reportId}, #{jobId}, #{sequence}, #{eventType}, #{epoch}, #{payloadJson},
+         CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="listAfterSequence" resultType="com.moonligh.report.infrastructure.persistence.ReportEventRow">
+        SELECT <include refid="cols"/>
+        FROM report_event
+        WHERE report_id = #{reportId}
+          AND sequence &gt; #{afterSequence}
+          AND epoch &gt;= #{minEpoch}
+        ORDER BY sequence ASC
+    </select>
+
+    <select id="maxSequence" resultType="long">
+        SELECT COALESCE(MAX(sequence), 0)
+        FROM report_event
+        WHERE job_id = #{jobId}
+    </select>
+
+    <select id="findByEventId" resultType="com.moonligh.report.infrastructure.persistence.ReportEventRow">
+        SELECT <include refid="cols"/>
+        FROM report_event
+        WHERE report_id = #{reportId} AND event_id = #{eventId}
+    </select>
+
+</mapper>

@@ -7,6 +7,10 @@ out/
 *.war
 *.ear
 
+# Local overrides (secrets)
+config/application-local.yml
+.worktrees/
+
 # Logs and local env
 *.log
 logs/

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportInterpretationBlockMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO report_interpretation_block
+        (id, interpretation_id, seq, block_id, claim_type, content, evidence_ids, validation_status)
+        VALUES
+        <foreach collection="rows" item="r" separator=",">
+            (#{r.id}, #{r.interpretationId}, #{r.seq}, #{r.blockId}, #{r.claimType}, #{r.content},
+             #{r.evidenceIds}, #{r.validationStatus})
+        </foreach>
+    </insert>
+
+    <select id="listByInterpretation" resultType="com.moonligh.report.infrastructure.persistence.ReportInterpretationBlockRow">
+        SELECT id, interpretation_id AS interpretationId, seq, block_id AS blockId,
+               claim_type AS claimType, content, evidence_ids AS evidenceIds,
+               validation_status AS validationStatus
+        FROM report_interpretation_block
+        WHERE interpretation_id = #{interpretationId}
+        ORDER BY seq
+    </select>
+
+</mapper>

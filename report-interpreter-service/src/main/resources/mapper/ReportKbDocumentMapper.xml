@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportKbDocumentMapper">
+
+    <sql id="cols">
+        doc_id AS docId, title, kb_version AS kbVersion, status,
+        authority_level AS authorityLevel, url,
+        effective_from AS effectiveFrom, effective_to AS effectiveTo,
+        created_at AS createdAt, updated_at AS updatedAt
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_kb_document
+        (doc_id, title, kb_version, status, authority_level, url,
+         effective_from, effective_to, created_at, updated_at)
+        VALUES
+        (#{docId}, #{title}, #{kbVersion}, #{status}, #{authorityLevel}, #{url},
+         #{effectiveFrom}, #{effectiveTo}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <update id="update">
+        UPDATE report_kb_document
+        SET title = #{title}, kb_version = #{kbVersion}, status = #{status},
+            authority_level = #{authorityLevel}, url = #{url},
+            effective_from = #{effectiveFrom}, effective_to = #{effectiveTo},
+            updated_at = CURRENT_TIMESTAMP(3)
+        WHERE doc_id = #{docId}
+    </update>
+
+    <select id="findById" resultType="com.moonligh.report.infrastructure.persistence.KbDocumentRow">
+        SELECT <include refid="cols"/>
+        FROM report_kb_document
+        WHERE doc_id = #{docId}
+    </select>
+
+    <select id="maxPublishedKbVersion" resultType="java.lang.String">
+        SELECT MAX(kb_version)
+        FROM report_kb_document
+        WHERE status = 'PUBLISHED'
+          AND effective_from &lt;= #{now}
+          AND (effective_to IS NULL OR effective_to &gt; #{now})
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM report_kb_document
+    </select>
+
+</mapper>

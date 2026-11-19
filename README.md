@@ -24,28 +24,25 @@
 
 ## 技术选择
 
-五个仓库使用同一套运行时，模型接入使用 Spring AI。
+与挂号、菜品推荐同一套运行时与平台脚手架（`platform-bom`）：
 
-- JDK 21
-- Spring Boot 4.1.1
-- Spring AI 2.0.1
-- MySQL 8.0.46
-- Redis 8.2.10
-- RocketMQ 5.5.1，Java 客户端使用 rocketmq-spring 2.3.6
+- JDK 21、Spring Boot 4.1.1
+- MySQL 8.0.46、Redis 8.2.10、RocketMQ 5.5.1
+- MyBatis（XML Mapper，不用 MyBatis-Plus）
+- 统一 `Result` / `ErrorCode` / 鉴权来自 `moonligh-platform`
 
-在本仓库中，Spring AI 负责版面理解、检索增强和流式解读。RocketMQ 把脱敏后的结构化结果异步送出。MySQL 保存健康档案。Redis 缓存同一份报告的解析结果。
+架构定稿见 `docs/superpowers/specs/2026-11-18-AI报告解读企业级完整方案-design.md`。工程规范对齐见 `docs/工程/企业规范对齐.md`。
 
-源码目录按 Maven 标准布局预留。构建文件会和第一批可运行代码一起提交。
-
-## 目录
+## 目录（目标结构）
 
 ```text
-src/main/java/com/moonligh/report/
-src/main/resources/
-src/test/java/com/moonligh/report/
+report-interpreter-api/
+report-interpreter-service/
+  src/main/java/com/moonligh/report/
+  src/main/resources/mapper/
 ```
 
-Java 包名是 `com.moonligh.report`。
+包名 `com.moonligh.report`。分层：`controller` / `service` / `domain` / `infrastructure`。
 
 ## 数据
 
@@ -67,10 +64,11 @@ Java 包名是 `com.moonligh.report`。
 
 ## 系列仓库
 
+- `moonligh-platform`：统一脚手架
 - `registration-assistant`：导诊挂号助手
-- `nutritionist`：饮食方案
-- `case-analysis`：案情分析
-- `contract-review`：合同审查
+- `nutritionist`：问餐 / 菜品推荐
+- `clinical-record`：病情主数据
+- `report-interpreter`：本仓
 
 ## 参与贡献
 
