@@ -110,11 +110,11 @@ class RuleMappersXmlTest {
     void outboxInsertUpdateAndRetryDueSelect() {
         Instant t = now();
         outbox.insert(new CriticalNotificationOutboxRow(
-                "obx-map-1", "evt-x", "RETRYING", "IN_APP", "idem-obx-1", 1, t.minusSeconds(5), "E1", null));
+                "obx-map-1", "evt-x", "RETRYING", "IN_APP", "idem-obx-1", 1, t.minusSeconds(5), "E1", null, null));
         outbox.insert(new CriticalNotificationOutboxRow(
-                "obx-map-2", "evt-y", "RETRYING", "IN_APP", "idem-obx-2", 1, t.plusSeconds(600), "E1", null));
+                "obx-map-2", "evt-y", "RETRYING", "IN_APP", "idem-obx-2", 1, t.plusSeconds(600), "E1", null, null));
         outbox.insert(new CriticalNotificationOutboxRow(
-                "obx-map-3", "evt-z", "ACCEPTED", "IN_APP", "idem-obx-3", 1, null, null, t));
+                "obx-map-3", "evt-z", "ACCEPTED", "IN_APP", "idem-obx-3", 1, null, null, t, null));
 
         List<String> due = outbox.listRetryDue(t, 1000).stream().map(CriticalNotificationOutboxRow::outboxId).toList();
         assertTrue(due.contains("obx-map-1"));
@@ -123,7 +123,7 @@ class RuleMappersXmlTest {
         assertEquals(1, outbox.listRetryDue(t, 1).size());
 
         outbox.updateStatus(new CriticalNotificationOutboxRow(
-                "obx-map-1", "evt-x", "ACCEPTED", "IN_APP", "idem-obx-1", 2, null, null, t));
+                "obx-map-1", "evt-x", "ACCEPTED", "IN_APP", "idem-obx-1", 2, null, null, t, null));
         CriticalNotificationOutboxRow updated = outbox.findById("obx-map-1");
         assertEquals("ACCEPTED", updated.notificationStatus());
         assertEquals(2, updated.attemptCount());

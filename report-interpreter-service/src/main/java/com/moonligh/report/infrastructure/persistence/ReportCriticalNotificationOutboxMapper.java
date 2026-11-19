@@ -13,6 +13,8 @@ public interface ReportCriticalNotificationOutboxMapper {
 
     int updateStatus(CriticalNotificationOutboxRow row);
 
+    int ack(@Param("eventId") String eventId, @Param("acknowledgedAt") Instant acknowledgedAt);
+
     List<CriticalNotificationOutboxRow> listRetryDue(@Param("now") Instant now, @Param("limit") int limit);
 
     CriticalNotificationOutboxRow findByEvent(@Param("eventId") String eventId);

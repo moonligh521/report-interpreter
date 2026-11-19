@@ -1,0 +1,5 @@
+REPORT_TYPE=US_REPORT
+SECTION|sec-liver|肝脏
+FINDING|f1|sec-liver|肝实质回声均匀
+FINDING|f2|sec-liver|未见明显占位
+ASSESSMENT|a1|肝脏超声未见明显异常

@@ -7,18 +7,18 @@
         notification_status AS notificationStatus, delivery_channel AS deliveryChannel,
         idempotency_key AS idempotencyKey, attempt_count AS attemptCount,
         next_retry_at AS nextRetryAt, last_error_code AS lastErrorCode,
-        delivered_at AS deliveredAt
+        delivered_at AS deliveredAt, acknowledged_at AS acknowledgedAt
     </sql>
 
     <insert id="insert">
         INSERT INTO report_critical_notification_outbox
         (outbox_id, event_id, notification_status, delivery_channel,
          idempotency_key, attempt_count, next_retry_at, last_error_code,
-         created_at, updated_at)
+         delivered_at, acknowledged_at, created_at, updated_at)
         VALUES
         (#{outboxId}, #{eventId}, #{notificationStatus}, #{deliveryChannel},
          #{idempotencyKey}, #{attemptCount}, #{nextRetryAt}, #{lastErrorCode},
-         CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
+         #{deliveredAt}, #{acknowledgedAt}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
     </insert>
 
     <update id="updateStatus">
@@ -28,8 +28,17 @@
             next_retry_at = #{nextRetryAt},
             last_error_code = #{lastErrorCode},
             delivered_at = #{deliveredAt},
+            acknowledged_at = #{acknowledgedAt},
             updated_at = CURRENT_TIMESTAMP(3)
         WHERE outbox_id = #{outboxId}
+    </update>
+
+    <update id="ack">
+        UPDATE report_critical_notification_outbox
+        SET notification_status = 'ACKNOWLEDGED',
+            acknowledged_at = #{acknowledgedAt},
+            updated_at = CURRENT_TIMESTAMP(3)
+        WHERE event_id = #{eventId}
     </update>
 
     <select id="listRetryDue" resultType="com.moonligh.report.infrastructure.persistence.CriticalNotificationOutboxRow">

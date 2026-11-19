@@ -4,7 +4,7 @@ import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
 
 /**
- * 质量门禁：每个指标必须带 pageIndex + rawText 证据，且不得仅凭单一分数放行。
+ * 质量门禁：LAB/CHECKUP 每个指标必须带 pageIndex + rawText；ECG/US 允许以所见/结论代替指标。
  */
 public final class ParseQualityGate {
 
@@ -12,8 +12,16 @@ public final class ParseQualityGate {
     }
 
     public static void check(ParseResult result) {
-        if (result == null || result.indicators() == null || result.indicators().isEmpty()) {
-            throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "未解析出任何指标");
+        if (result == null) {
+            throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "解析结果为空");
+        }
+        boolean hasIndicators = result.indicators() != null && !result.indicators().isEmpty();
+        boolean hasStructure = result.structure() != null && !result.structure().isEmpty();
+        if (!hasIndicators && !hasStructure) {
+            throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "未解析出任何指标或结构内容");
+        }
+        if (!hasIndicators) {
+            return;
         }
         for (ParsedIndicator ind : result.indicators()) {
             var ev = ind.evidence();

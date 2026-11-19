@@ -12,28 +12,44 @@ import org.springframework.util.StringUtils;
 import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
 import com.moonligh.report.api.req.CreateReviewReq;
+import com.moonligh.report.api.req.ResolveReviewReq;
 import com.moonligh.report.api.res.CreateReviewRes;
+import com.moonligh.report.api.res.ResolveReviewRes;
+import com.moonligh.report.domain.critical.CriticalEventStore;
+import com.moonligh.report.domain.critical.CriticalNotificationManager;
+import com.moonligh.report.domain.critical.NotificationStatus;
 import com.moonligh.report.domain.job.ReportJobStore;
 import com.moonligh.report.domain.review.ReviewTaskStore;
+import com.moonligh.report.infrastructure.persistence.CriticalNotificationOutboxRow;
+import com.moonligh.report.infrastructure.persistence.ReportReviewTaskMapper;
 import com.moonligh.report.infrastructure.persistence.ReportReviewTaskRow;
 
 /**
- * 人工复核任务（P0 待复核出口）。内部调用，按 Idempotency-Key 幂等：同键同内容回放，同键异内容冲突。
+ * 人工复核任务。创建与结案（resolve）属于危急/覆盖复核通道，与普通字段修订分离（M-R6）。
  */
 @Service
 public class ReviewService {
 
     static final String STATUS_OPEN = "OPEN";
+    static final String STATUS_RESOLVED = "RESOLVED";
     private static final Set<String> PRIORITIES = Set.of("NORMAL", "HIGH", "URGENT");
     private static final int MAX_KEY = 64;
     private static final int MAX_REASON = 512;
 
     private final ReviewTaskStore tasks;
+    private final ReportReviewTaskMapper reviewMapper;
     private final ReportJobStore jobs;
+    private final CriticalEventStore criticalEvents;
+    private final CriticalNotificationManager notifications;
 
-    public ReviewService(ReviewTaskStore tasks, ReportJobStore jobs) {
+    public ReviewService(
+            ReviewTaskStore tasks, ReportReviewTaskMapper reviewMapper, ReportJobStore jobs,
+            CriticalEventStore criticalEvents, CriticalNotificationManager notifications) {
         this.tasks = tasks;
+        this.reviewMapper = reviewMapper;
         this.jobs = jobs;
+        this.criticalEvents = criticalEvents;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -57,6 +73,36 @@ public class ReviewService {
                     tasks.findByIdempotency(idempotencyKey).orElseThrow(() -> e), req.reportId(), reason, priority);
         }
         return new CreateReviewRes(row.reviewTaskId(), row.status());
+    }
+
+    /**
+     * 结案危急/覆盖复核：标记 RESOLVED，并将该报告 PENDING_REVIEW 通知放行为 PENDING。
+     * 不产生新 parseVersion（普通修订走 /internal/report/corrections）。
+     */
+    @Transactional
+    public ResolveReviewRes resolve(String reviewTaskId, ResolveReviewReq req, String idempotencyKey) {
+        if (!StringUtils.hasText(idempotencyKey) || idempotencyKey.length() > MAX_KEY) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "缺少或非法 Idempotency-Key");
+        }
+        if (req == null || !StringUtils.hasText(req.resolution())) {
+            throw new BusinessException(ErrorCode.PARAM_MISSING, "resolution 不能为空");
+        }
+        ReportReviewTaskRow row = reviewMapper.findById(reviewTaskId);
+        if (row == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "复核任务不存在");
+        }
+        if (STATUS_RESOLVED.equals(row.status())) {
+            return new ResolveReviewRes(row.reviewTaskId(), STATUS_RESOLVED);
+        }
+        reviewMapper.updateStatus(reviewTaskId, STATUS_RESOLVED);
+        for (var event : criticalEvents.listEventsByReport(row.reportId())) {
+            Optional<CriticalNotificationOutboxRow> outbox = criticalEvents.findOutboxByEvent(event.eventId());
+            if (outbox.isPresent()
+                    && NotificationStatus.PENDING_REVIEW.name().equals(outbox.get().notificationStatus())) {
+                notifications.releaseAfterReview(outbox.get().outboxId());
+            }
+        }
+        return new ResolveReviewRes(reviewTaskId, STATUS_RESOLVED);
     }
 
     private static CreateReviewRes replay(ReportReviewTaskRow row, String reportId, String reason, String priority) {

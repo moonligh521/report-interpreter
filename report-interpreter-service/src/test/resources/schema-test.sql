@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS report_parse_result (
   parse_confidence  DECIMAL(5,4)  NOT NULL,
   status            VARCHAR(32)   NOT NULL,
   request_key       VARCHAR(64),
+  structure_json    CLOB,
   created_at        TIMESTAMP(3)  NOT NULL,
   updated_at        TIMESTAMP(3)  NOT NULL,
   CONSTRAINT uk_parse_report_version UNIQUE (report_id, parse_version),
@@ -51,7 +52,9 @@ CREATE TABLE IF NOT EXISTS report_indicator (
   conf_name             DECIMAL(5,4)   NOT NULL,
   conf_value            DECIMAL(5,4)   NOT NULL,
   conf_unit             DECIMAL(5,4)   NOT NULL,
-  conf_ref_range        DECIMAL(5,4)   NOT NULL
+  conf_ref_range        DECIMAL(5,4)   NOT NULL,
+  sub_report_id         VARCHAR(64),
+  report_time           TIMESTAMP(3)
 );
 
 CREATE TABLE IF NOT EXISTS report_source_evidence (
@@ -100,9 +103,34 @@ CREATE TABLE IF NOT EXISTS report_critical_notification_outbox (
   next_retry_at        TIMESTAMP(3),
   last_error_code      VARCHAR(64),
   delivered_at         TIMESTAMP(3),
+  acknowledged_at      TIMESTAMP(3),
   created_at           TIMESTAMP(3) NOT NULL,
   updated_at           TIMESTAMP(3) NOT NULL,
   CONSTRAINT uk_critical_outbox_idem UNIQUE (idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_question (
+  answer_id         VARCHAR(64)   NOT NULL PRIMARY KEY,
+  report_id         VARCHAR(64)   NOT NULL,
+  question          VARCHAR(2000) NOT NULL,
+  focus_codes_json  VARCHAR(2000),
+  idempotency_key   VARCHAR(64)   NOT NULL,
+  response_json     CLOB,
+  result_code       INT,
+  created_at        TIMESTAMP(3)  NOT NULL,
+  CONSTRAINT uk_report_question_idem UNIQUE (report_id, idempotency_key)
+);
+
+CREATE TABLE IF NOT EXISTS report_correction (
+  id                   VARCHAR(64)  NOT NULL PRIMARY KEY,
+  report_id            VARCHAR(64)  NOT NULL,
+  parse_version_base   INT          NOT NULL,
+  new_parse_version    INT          NOT NULL,
+  reviewer_id          VARCHAR(64)  NOT NULL,
+  patches_json         CLOB         NOT NULL,
+  idempotency_key      VARCHAR(64)  NOT NULL,
+  created_at           TIMESTAMP(3) NOT NULL,
+  CONSTRAINT uk_report_correction_idem UNIQUE (idempotency_key)
 );
 
 CREATE TABLE IF NOT EXISTS report_review_task (

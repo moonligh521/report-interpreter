@@ -42,7 +42,8 @@ public class IndicatorDtoAssembler {
         return new IndicatorDto(
                 r.id(), r.rawName(), r.rawValue(), r.rawUnit(), r.canonicalCode(), r.specimenType(),
                 stripScale(r.normalizedValue()), r.normalizedUnit(), r.normalizationStatus(),
-                stripScale(r.refLow()), stripScale(r.refHigh()), conf, evidence);
+                stripScale(r.refLow()), stripScale(r.refHigh()), conf, evidence,
+                r.subReportId(), r.reportTime());
     }
 
     private BoundingBox readRegion(String regionJson) {

@@ -37,7 +37,11 @@ public final class UploadGuard {
 
     private static boolean isTextFixture(String fileName, String mime) {
         String name = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
-        return "text/plain".equals(mime) || name.endsWith(".lab.txt");
+        return "text/plain".equals(mime)
+                || name.endsWith(".lab.txt")
+                || name.endsWith(".checkup.txt")
+                || name.endsWith(".ecg.txt")
+                || name.endsWith(".us.txt");
     }
 
     private static Kind checkText(boolean allowTextFixture, byte[] content) {

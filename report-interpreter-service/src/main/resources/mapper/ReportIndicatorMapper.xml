@@ -8,14 +8,14 @@
          raw_name, raw_value, raw_unit, canonical_code, specimen_type,
          normalized_value, normalized_unit, normalization_status, ref_low, ref_high,
          conf_ocr, conf_structure, conf_extraction, conf_normalization,
-         conf_name, conf_value, conf_unit, conf_ref_range)
+         conf_name, conf_value, conf_unit, conf_ref_range, sub_report_id, report_time)
         VALUES
         <foreach collection="rows" item="r" separator=",">
             (#{r.id}, #{r.parseResultId}, #{r.reportId}, #{r.parseVersion},
              #{r.rawName}, #{r.rawValue}, #{r.rawUnit}, #{r.canonicalCode}, #{r.specimenType},
              #{r.normalizedValue}, #{r.normalizedUnit}, #{r.normalizationStatus}, #{r.refLow}, #{r.refHigh},
              #{r.confOcr}, #{r.confStructure}, #{r.confExtraction}, #{r.confNormalization},
-             #{r.confName}, #{r.confValue}, #{r.confUnit}, #{r.confRefRange})
+             #{r.confName}, #{r.confValue}, #{r.confUnit}, #{r.confRefRange}, #{r.subReportId}, #{r.reportTime})
         </foreach>
     </insert>
 
@@ -28,7 +28,8 @@
                conf_ocr AS confOcr, conf_structure AS confStructure,
                conf_extraction AS confExtraction, conf_normalization AS confNormalization,
                conf_name AS confName, conf_value AS confValue, conf_unit AS confUnit,
-               conf_ref_range AS confRefRange
+               conf_ref_range AS confRefRange,
+               sub_report_id AS subReportId, report_time AS reportTime
         FROM report_indicator WHERE parse_result_id = #{parseResultId} ORDER BY id ASC
     </select>
 

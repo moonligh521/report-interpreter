@@ -128,7 +128,7 @@ public class LabPanelTextParser implements ReportParser {
         }
         String declared = line.substring(TYPE_PREFIX.length()).strip();
         if (!ReportType.LAB_PANEL.name().equals(declared)) {
-            throw new BusinessException(ErrorCode.REPORT_TYPE_UNSUPPORTED, "仅支持 LAB_PANEL 报告");
+            throw new BusinessException(ErrorCode.REPORT_TYPE_UNSUPPORTED, "夹具类型与声明不符");
         }
     }
 

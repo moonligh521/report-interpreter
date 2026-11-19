@@ -14,9 +14,12 @@ import com.moonligh.report.domain.parse.ParseContext;
 import com.moonligh.report.domain.parse.ParserRegistry;
 import com.moonligh.report.domain.parse.ReportParser;
 import com.moonligh.report.domain.parse.ReportType;
+import com.moonligh.report.infrastructure.parser.CheckupBookTextParser;
+import com.moonligh.report.infrastructure.parser.EcgReportTextParser;
 import com.moonligh.report.infrastructure.parser.LabPanelTextParser;
+import com.moonligh.report.infrastructure.parser.UsReportTextParser;
 
-/** AC-P9：无条件多引擎串行路径不存在，LAB_PANEL 仅一个解析器。 */
+/** AC-P9：每种类型仅一个解析器，无条件多引擎串行路径不存在。 */
 @SpringBootTest
 @ActiveProfiles("test")
 class NoDualEngineTest {
@@ -28,10 +31,13 @@ class NoDualEngineTest {
     private ParserRegistry registry;
 
     @Test
-    void exactlyOneParserRegistered() {
-        assertEquals(1, parsers.size());
-        assertEquals(1, registry.size());
-        assertTrue(parsers.get(0) instanceof LabPanelTextParser);
+    void oneParserPerSupportedType() {
+        assertEquals(4, parsers.size());
+        assertEquals(4, registry.size());
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof LabPanelTextParser));
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof CheckupBookTextParser));
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof EcgReportTextParser));
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof UsReportTextParser));
     }
 
     @Test
@@ -40,5 +46,6 @@ class NoDualEngineTest {
         ParseContext pdf = new ParseContext("r", ReportType.LAB_PANEL, "a.pdf", "application/pdf", new byte[] {1});
         assertTrue(registry.find(text).isPresent());
         assertTrue(registry.find(pdf).isEmpty());
+        assertEquals(1, parsers.stream().filter(p -> p.supports(text)).count());
     }
 }

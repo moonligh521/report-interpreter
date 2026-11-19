@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportQuestionMapper">
+
+    <insert id="insert">
+        INSERT INTO report_question
+        (answer_id, report_id, question, focus_codes_json, idempotency_key, response_json, result_code, created_at)
+        VALUES (#{answerId}, #{reportId}, #{question}, #{focusCodesJson}, #{idempotencyKey},
+                #{responseJson}, #{resultCode}, CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findByIdempotency" resultType="com.moonligh.report.infrastructure.persistence.ReportQuestionRow">
+        SELECT answer_id AS answerId, report_id AS reportId, question,
+               focus_codes_json AS focusCodesJson, idempotency_key AS idempotencyKey,
+               response_json AS responseJson, result_code AS resultCode,
+               created_at AS createdAt
+        FROM report_question
+        WHERE report_id = #{reportId} AND idempotency_key = #{idempotencyKey}
+    </select>
+
+</mapper>

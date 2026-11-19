@@ -11,7 +11,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.moonligh.consult.framework.ErrorCode;
 
-/** AC-P7：仅 LAB_PANEL，其它 → 4101。 */
+/** AC-P7 / V0.2：IMAGING_FILM 与未知类型 → 4101；CHECKUP/ECG/US 可接受。 */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -43,5 +43,34 @@ class ReportTypeRejectTest {
                 mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "LAB_PANEL",
                 ReportTestSupport.labFile(ReportTestSupport.golden("imaging-film.lab.txt")));
         assertEquals(4101, res.path("code").asInt());
+    }
+
+    @Test
+    void checkupBookAccepted() throws Exception {
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "sample.checkup.txt", "text/plain",
+                ReportTestSupport.golden("checkup-basic.checkup.txt")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var res = ReportTestSupport.create(
+                mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "CHECKUP_BOOK", file);
+        assertEquals(200, res.path("code").asInt(), res.toString());
+    }
+
+    @Test
+    void ecgAndUsAccepted() throws Exception {
+        var ecg = new org.springframework.mock.web.MockMultipartFile(
+                "file", "sample.ecg.txt", "text/plain",
+                ReportTestSupport.golden("ecg-basic.ecg.txt")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var us = new org.springframework.mock.web.MockMultipartFile(
+                "file", "sample.us.txt", "text/plain",
+                ReportTestSupport.golden("us-basic.us.txt")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(200, ReportTestSupport.create(
+                mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "ECG_REPORT", ecg)
+                .path("code").asInt());
+        assertEquals(200, ReportTestSupport.create(
+                mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "US_REPORT", us)
+                .path("code").asInt());
     }
 }
