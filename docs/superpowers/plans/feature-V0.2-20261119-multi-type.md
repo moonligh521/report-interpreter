@@ -101,4 +101,4 @@ AC-M1～M10 + **AC-M11** 无 Map。
 ## 7. 完成定义
 
 - [x] 本任务分支实现 + `mvn -B verify` 全绿（multi-type）
-- [ ] SDD；TDD+AC；`release-V0.2-*` → `master` → `V0.2.0`  
+- [x] SDD；TDD+AC；`release-V0.2-20261119` → `master` → `V0.2.0`  
