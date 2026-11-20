@@ -89,7 +89,7 @@
 - [x] RP-1～RP-8 命名测试齐
 - [x] `mvn -B verify` 全绿
 - [x] 更新 `docs/工程/分支与版本.md`、CHANGELOG Unreleased
-- [ ] 合入 `feature-V1.0-20261120` 并推送
+- [x] 合入 `feature-V1.0-20261120` 并推送
 - [x] Commit: `test: real-parse 回归与文档状态`
 
 ---
@@ -98,7 +98,7 @@
 
 - [x] 规格终冻确认  
 - [x] Task 1～8 完成；verify 绿（327）  
-- [ ] 合入版本线；不打临床总标签 `V1.0.0`
+- [x] 合入版本线；不打临床总标签 `V1.0.0`
 
 ## Spec coverage
 
