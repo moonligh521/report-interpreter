@@ -147,13 +147,17 @@ class RuleMappersXmlTest {
     void ruleSummaryInsertAndFind() {
         summaries.insert(new ReportRuleSummaryRow(
                 "rpt-map-sum", 1, "rules-v1.0.0", "MISSING", "报告中未识别到身份信息", "UNKNOWN",
-                "{\"pagesProcessed\":[]}", "NEED_MANUAL_REVIEW", true, false, 4110, null));
+                "{\"pagesProcessed\":[]}", "NEED_MANUAL_REVIEW", true, false, 4110,
+                "FAKE", "builtin-v1", true, null));
         ReportRuleSummaryRow row = summaries.find("rpt-map-sum", 1);
         assertEquals("MISSING", row.identityStatus());
         assertEquals("UNKNOWN", row.coverageStatus());
         assertTrue(row.archiveBlocked());
         assertFalse(row.safeNormalAllowed());
         assertEquals(4110, row.blockCode());
+        assertEquals("FAKE", row.factsSource());
+        assertEquals("builtin-v1", row.catalogVersion());
+        assertTrue(row.factsIncomplete());
         assertNull(summaries.find("rpt-map-sum", 2));
     }
 }

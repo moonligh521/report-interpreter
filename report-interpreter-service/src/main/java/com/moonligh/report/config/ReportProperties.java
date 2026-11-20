@@ -19,12 +19,18 @@ public class ReportProperties {
 
     private final Archive archive = new Archive();
 
+    private final ClinicalFacts clinicalFacts = new ClinicalFacts();
+
     public Interpretation getInterpretation() {
         return interpretation;
     }
 
     public Archive getArchive() {
         return archive;
+    }
+
+    public ClinicalFacts getClinicalFacts() {
+        return clinicalFacts;
     }
 
     public String getDisplayName() {
@@ -284,6 +290,92 @@ public class ReportProperties {
 
         public void setMaxNotifyAttempts(int maxNotifyAttempts) {
             this.maxNotifyAttempts = maxNotifyAttempts;
+        }
+    }
+
+    /** report.clinical-facts.*：人口学与临床目录。 */
+    public static class ClinicalFacts {
+
+        /** fake | http-identity */
+        private String patientFactsAdapter = "fake";
+
+        private final Identity identity = new Identity();
+
+        private final Catalog catalog = new Catalog();
+
+        public String getPatientFactsAdapter() {
+            return patientFactsAdapter;
+        }
+
+        public void setPatientFactsAdapter(String patientFactsAdapter) {
+            this.patientFactsAdapter = patientFactsAdapter;
+        }
+
+        public Identity getIdentity() {
+            return identity;
+        }
+
+        public Catalog getCatalog() {
+            return catalog;
+        }
+    }
+
+    /** report.clinical-facts.identity.* */
+    public static class Identity {
+
+        private String baseUrl = "";
+
+        private long connectTimeoutMs = 1_000;
+
+        private long readTimeoutMs = 2_000;
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public long getConnectTimeoutMs() {
+            return connectTimeoutMs;
+        }
+
+        public void setConnectTimeoutMs(long connectTimeoutMs) {
+            this.connectTimeoutMs = connectTimeoutMs;
+        }
+
+        public long getReadTimeoutMs() {
+            return readTimeoutMs;
+        }
+
+        public void setReadTimeoutMs(long readTimeoutMs) {
+            this.readTimeoutMs = readTimeoutMs;
+        }
+    }
+
+    /** report.clinical-facts.catalog.* */
+    public static class Catalog {
+
+        /** fake | classpath | db */
+        private String adapter = "fake";
+
+        private String activeVersion = "builtin-v1";
+
+        public String getAdapter() {
+            return adapter;
+        }
+
+        public void setAdapter(String adapter) {
+            this.adapter = adapter;
+        }
+
+        public String getActiveVersion() {
+            return activeVersion;
+        }
+
+        public void setActiveVersion(String activeVersion) {
+            this.activeVersion = activeVersion;
         }
     }
 }

@@ -40,6 +40,15 @@ consult:
 
 report:
   display-name: report-interpreter
+  clinical-facts:
+    patient-facts-adapter: fake
+    identity:
+      base-url: ""
+      connect-timeout-ms: 1000
+      read-timeout-ms: 2000
+    catalog:
+      adapter: fake
+      active-version: builtin-v1
 
 management:
   endpoints:

@@ -31,6 +31,11 @@ report:
   display-name: report-interpreter-test
   parse:
     allow-text-fixture: true
+  clinical-facts:
+    patient-facts-adapter: fake
+    catalog:
+      adapter: fake
+      active-version: builtin-v1
 
 management:
   endpoints:
