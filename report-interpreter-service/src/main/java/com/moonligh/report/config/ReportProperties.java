@@ -52,6 +52,12 @@ public class ReportProperties {
         /** 是否允许 text/plain 与 .lab.txt 金标夹具；生产必须为 false。 */
         private boolean allowTextFixture = false;
 
+        private final Probe probe = new Probe();
+
+        private final Extraction extraction = new Extraction();
+
+        private final Limits limits = new Limits();
+
         public long getMaxFileBytes() {
             return maxFileBytes;
         }
@@ -66,6 +72,148 @@ public class ReportProperties {
 
         public void setAllowTextFixture(boolean allowTextFixture) {
             this.allowTextFixture = allowTextFixture;
+        }
+
+        public Probe getProbe() {
+            return probe;
+        }
+
+        public Extraction getExtraction() {
+            return extraction;
+        }
+
+        public Limits getLimits() {
+            return limits;
+        }
+    }
+
+    /** report.parse.probe.*：文本层路由阈值。 */
+    public static class Probe {
+
+        private double minNonEmptyPageRatio = 0.80;
+        private double minExtractableCharRatio = 0.85;
+        private double minAverageCharsPerPage = 20.0;
+        private int minTotalChars = 30;
+
+        public double getMinNonEmptyPageRatio() {
+            return minNonEmptyPageRatio;
+        }
+
+        public void setMinNonEmptyPageRatio(double minNonEmptyPageRatio) {
+            this.minNonEmptyPageRatio = minNonEmptyPageRatio;
+        }
+
+        public double getMinExtractableCharRatio() {
+            return minExtractableCharRatio;
+        }
+
+        public void setMinExtractableCharRatio(double minExtractableCharRatio) {
+            this.minExtractableCharRatio = minExtractableCharRatio;
+        }
+
+        public double getMinAverageCharsPerPage() {
+            return minAverageCharsPerPage;
+        }
+
+        public void setMinAverageCharsPerPage(double minAverageCharsPerPage) {
+            this.minAverageCharsPerPage = minAverageCharsPerPage;
+        }
+
+        public int getMinTotalChars() {
+            return minTotalChars;
+        }
+
+        public void setMinTotalChars(int minTotalChars) {
+            this.minTotalChars = minTotalChars;
+        }
+    }
+
+    /** report.parse.extraction.*：外置抽取适配。 */
+    public static class Extraction {
+
+        /** fake | http */
+        private String mode = "fake";
+
+        private String baseUrl = "http://127.0.0.1:18093";
+
+        private long connectTimeoutMs = 3_000;
+
+        private long readTimeoutMs = 30_000;
+
+        private long maxRequestBytes = 20L * 1024 * 1024;
+
+        private long maxResponseBytes = 20L * 1024 * 1024;
+
+        public String getMode() {
+            return mode;
+        }
+
+        public void setMode(String mode) {
+            this.mode = mode;
+        }
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public long getConnectTimeoutMs() {
+            return connectTimeoutMs;
+        }
+
+        public void setConnectTimeoutMs(long connectTimeoutMs) {
+            this.connectTimeoutMs = connectTimeoutMs;
+        }
+
+        public long getReadTimeoutMs() {
+            return readTimeoutMs;
+        }
+
+        public void setReadTimeoutMs(long readTimeoutMs) {
+            this.readTimeoutMs = readTimeoutMs;
+        }
+
+        public long getMaxRequestBytes() {
+            return maxRequestBytes;
+        }
+
+        public void setMaxRequestBytes(long maxRequestBytes) {
+            this.maxRequestBytes = maxRequestBytes;
+        }
+
+        public long getMaxResponseBytes() {
+            return maxResponseBytes;
+        }
+
+        public void setMaxResponseBytes(long maxResponseBytes) {
+            this.maxResponseBytes = maxResponseBytes;
+        }
+    }
+
+    /** report.parse.limits.*：页数/像素等资源限额。 */
+    public static class Limits {
+
+        private int maxPdfPages = 50;
+
+        private int maxImagePixels = 40_000_000;
+
+        public int getMaxPdfPages() {
+            return maxPdfPages;
+        }
+
+        public void setMaxPdfPages(int maxPdfPages) {
+            this.maxPdfPages = maxPdfPages;
+        }
+
+        public int getMaxImagePixels() {
+            return maxImagePixels;
+        }
+
+        public void setMaxImagePixels(int maxImagePixels) {
+            this.maxImagePixels = maxImagePixels;
         }
     }
 
