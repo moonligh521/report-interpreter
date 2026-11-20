@@ -18,5 +18,8 @@ public record ReportRuleSummaryRow(
         boolean archiveBlocked,
         boolean safeNormalAllowed,
         Integer blockCode,
+        String factsSource,
+        String catalogVersion,
+        boolean factsIncomplete,
         Instant createdAt) {
 }

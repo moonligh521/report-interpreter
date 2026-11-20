@@ -33,7 +33,10 @@ import com.moonligh.report.domain.rule.IdentifiedIndicator;
 import com.moonligh.report.domain.rule.IdentityCheckResult;
 import com.moonligh.report.domain.rule.IdentityStatus;
 import com.moonligh.report.domain.rule.IndicatorOutcome;
+import com.moonligh.report.domain.rule.ClinicalCatalog;
 import com.moonligh.report.domain.rule.PatientFacts;
+import com.moonligh.report.domain.rule.PatientFactsPort;
+import com.moonligh.report.domain.rule.PatientFactsResolution;
 import com.moonligh.report.domain.rule.ReferenceRangeEngine;
 import com.moonligh.report.domain.rule.ReferenceRangeResult;
 import com.moonligh.report.domain.rule.ReferenceStatus;
@@ -47,6 +50,7 @@ import com.moonligh.report.domain.rule.SafetyGate;
 import com.moonligh.report.domain.rule.SafetyVerdict;
 import com.moonligh.report.infrastructure.persistence.CriticalNotificationOutboxRow;
 import com.moonligh.report.infrastructure.persistence.ReportCriticalEventRow;
+import com.moonligh.report.infrastructure.persistence.ReportJobRow;
 import com.moonligh.report.infrastructure.persistence.ReportRuleExecutionRow;
 import com.moonligh.report.infrastructure.persistence.ReportRuleSummaryRow;
 
@@ -68,6 +72,8 @@ public class ReportRuleService {
     private final ReferenceRangeEngine referenceEngine;
     private final CriticalValueEngine criticalEngine;
     private final SafetyGate gate;
+    private final PatientFactsPort patientFacts;
+    private final ClinicalCatalog clinicalCatalog;
     private final ObjectMapper json = new ObjectMapper();
 
     public ReportRuleService(
@@ -81,7 +87,9 @@ public class ReportRuleService {
             RuleContextResolver resolver,
             ReferenceRangeEngine referenceEngine,
             CriticalValueEngine criticalEngine,
-            SafetyGate gate) {
+            SafetyGate gate,
+            PatientFactsPort patientFacts,
+            ClinicalCatalog clinicalCatalog) {
         this.jobs = jobs;
         this.executions = executions;
         this.summaries = summaries;
@@ -93,6 +101,8 @@ public class ReportRuleService {
         this.referenceEngine = referenceEngine;
         this.criticalEngine = criticalEngine;
         this.gate = gate;
+        this.patientFacts = patientFacts;
+        this.clinicalCatalog = clinicalCatalog;
     }
 
     /** 对某解析版本执行规则，写入快照 / 危急事件 / 汇总，并把报告状态推进到规则出口状态。 */
@@ -103,10 +113,13 @@ public class ReportRuleService {
         Instant now = Instant.now();
         IdentityCheckResult identity = identityChecker.check(parse.meta().patientName(), expectedPatientName);
         CriticalCoverageResult coverage = coverageChecker.check(parse.indicators(), parse.meta());
+        String patientId = jobs.findById(reportId).map(ReportJobRow::patientId).orElse(null);
+        PatientFactsResolution factsResolution = patientFacts.resolve(patientId, now);
+        PatientFacts facts = factsResolution.facts();
 
         List<IndicatorOutcome> outcomes = new ArrayList<>();
         for (IdentifiedIndicator ii : indicators) {
-            IndicatorOutcome outcome = evaluate(ii);
+            IndicatorOutcome outcome = evaluate(ii, facts);
             persistExecution(reportId, parseVersion, outcome);
             outcomes.add(outcome);
         }
@@ -121,7 +134,11 @@ public class ReportRuleService {
                 identity.status().name(), identity.detail(),
                 coverage.status().name(), writeEvidence(coverage.evidence()),
                 verdict.status().name(), verdict.archiveBlocked(), verdict.safeNormalAllowed(),
-                verdict.blockCode(), null));
+                verdict.blockCode(),
+                factsResolution.source().name(),
+                clinicalCatalog.version(),
+                factsResolution.incomplete(),
+                null));
         jobs.updateStatus(reportId, verdict.status().name());
         return verdict;
     }
@@ -137,7 +154,10 @@ public class ReportRuleService {
                 s.archiveBlocked(),
                 s.safeNormalAllowed(),
                 s.blockCode(),
-                s.ruleVersion()));
+                s.ruleVersion(),
+                s.factsSource(),
+                s.catalogVersion(),
+                s.factsIncomplete()));
     }
 
     /** 报告的全部危急事件（含通知状态），独立于解读生命周期。 */
@@ -156,8 +176,8 @@ public class ReportRuleService {
 
     // ---- 内部 ----
 
-    private IndicatorOutcome evaluate(IdentifiedIndicator ii) {
-        RuleContext ctx = resolver.resolve(ii.indicatorId(), ii.indicator(), PatientFacts.UNKNOWN);
+    private IndicatorOutcome evaluate(IdentifiedIndicator ii, PatientFacts facts) {
+        RuleContext ctx = resolver.resolve(ii.indicatorId(), ii.indicator(), facts);
         List<CriticalRule> rules = criticalEngine.table().rulesFor(ctx.canonicalCode());
         ApplicabilityResult applicability = gate.applicability(ctx, rules);
         ReferenceRangeResult reference = referenceEngine.evaluate(ctx);
@@ -223,6 +243,9 @@ public class ReportRuleService {
             boolean archiveBlocked,
             boolean safeNormalAllowed,
             Integer blockCode,
-            String ruleVersion) {
+            String ruleVersion,
+            String factsSource,
+            String catalogVersion,
+            boolean factsIncomplete) {
     }
 }

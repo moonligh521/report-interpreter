@@ -157,6 +157,9 @@ CREATE TABLE IF NOT EXISTS report_rule_summary (
   archive_blocked         TINYINT      NOT NULL,
   safe_normal_allowed     TINYINT      NOT NULL,
   block_code              INT,
+  facts_source            VARCHAR(32),
+  catalog_version         VARCHAR(64),
+  facts_incomplete        TINYINT      NOT NULL DEFAULT 1,
   created_at              TIMESTAMP(3) NOT NULL,
   PRIMARY KEY (report_id, parse_version)
 );

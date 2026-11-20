@@ -6,11 +6,13 @@
         INSERT INTO report_rule_summary
         (report_id, parse_version, rule_version, identity_status, identity_detail,
          coverage_status, coverage_evidence_json, outcome_status,
-         archive_blocked, safe_normal_allowed, block_code, created_at)
+         archive_blocked, safe_normal_allowed, block_code,
+         facts_source, catalog_version, facts_incomplete, created_at)
         VALUES
         (#{reportId}, #{parseVersion}, #{ruleVersion}, #{identityStatus}, #{identityDetail},
          #{coverageStatus}, #{coverageEvidenceJson}, #{outcomeStatus},
-         #{archiveBlocked}, #{safeNormalAllowed}, #{blockCode}, CURRENT_TIMESTAMP(3))
+         #{archiveBlocked}, #{safeNormalAllowed}, #{blockCode},
+         #{factsSource}, #{catalogVersion}, #{factsIncomplete}, CURRENT_TIMESTAMP(3))
     </insert>
 
     <select id="find" resultType="com.moonligh.report.infrastructure.persistence.ReportRuleSummaryRow">
@@ -19,6 +21,8 @@
                coverage_status AS coverageStatus, coverage_evidence_json AS coverageEvidenceJson,
                outcome_status AS outcomeStatus, archive_blocked AS archiveBlocked,
                safe_normal_allowed AS safeNormalAllowed, block_code AS blockCode,
+               facts_source AS factsSource, catalog_version AS catalogVersion,
+               facts_incomplete AS factsIncomplete,
                created_at AS createdAt
         FROM report_rule_summary
         WHERE report_id = #{reportId} AND parse_version = #{parseVersion}
