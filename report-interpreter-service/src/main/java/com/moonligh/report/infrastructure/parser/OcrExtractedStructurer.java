@@ -33,10 +33,14 @@ public class OcrExtractedStructurer {
         }
         List<ParsedIndicator> indicators = new ArrayList<>();
         List<Integer> failedPages = new ArrayList<>();
+        List<Integer> lowConfidencePages = new ArrayList<>();
         String patientName = null;
         for (ExtractedPage page : doc.pages()) {
             if (page.status() == PageParseStatus.FAILED || page.status() == PageParseStatus.EMPTY) {
                 failedPages.add(page.pageIndex());
+            } else if (page.status() == PageParseStatus.LOW_CONFIDENCE
+                    || page.status() == PageParseStatus.NEED_MANUAL_REVIEW) {
+                lowConfidencePages.add(page.pageIndex());
             }
             for (String line : page.rawText().split("\\r?\\n")) {
                 String trimmed = line.strip();
@@ -53,7 +57,8 @@ public class OcrExtractedStructurer {
                 indicators.add(parseLine(trimmed, page.pageIndex(), doc.ocrConfidence(), doc.layoutConfidence()));
             }
         }
-        ReportMeta meta = new ReportMeta(patientName, doc.totalPages(), failedPages, List.of(), null);
+        ReportMeta meta = new ReportMeta(
+                patientName, doc.totalPages(), failedPages, List.of(), null, lowConfidencePages);
         // 即使无指标也返回结构，交由质量门禁按页状态裁决（避免静默跳过坏页）。
         double overall = Math.min(doc.ocrConfidence(), doc.layoutConfidence());
         if (!indicators.isEmpty()) {
