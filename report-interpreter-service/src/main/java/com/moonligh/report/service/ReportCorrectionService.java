@@ -95,7 +95,7 @@ public class ReportCorrectionService {
         String parseId = "prs_" + UUID.randomUUID().toString().replace("-", "");
         parses.insertParseResult(new ReportParseResultRow(
                 parseId, req.reportId(), newVersion, true, base.reportType(), base.parseConfidence(),
-                ReportParseService.STATUS_PARSED, idempotencyKey, base.structureJson()));
+                ReportParseService.STATUS_PARSED, idempotencyKey, base.structureJson(), base.specimenTime()));
 
         List<ReportIndicatorRow> newRows = new ArrayList<>();
         List<IdentifiedIndicator> identified = new ArrayList<>();

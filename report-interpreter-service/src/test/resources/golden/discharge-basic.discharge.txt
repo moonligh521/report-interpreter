@@ -1,0 +1,6 @@
+REPORT_TYPE=DISCHARGE_SUMMARY
+SECTION|sec-course|住院经过
+SECTION|sec-advice|出院医嘱
+FINDING|f1|sec-course|入院后予抗感染与补液治疗
+FINDING|f2|sec-advice|出院后低盐饮食并复诊
+ASSESSMENT|a1|病情稳定准予出院

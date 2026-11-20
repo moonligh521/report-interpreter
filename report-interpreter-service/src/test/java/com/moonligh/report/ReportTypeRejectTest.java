@@ -73,4 +73,22 @@ class ReportTypeRejectTest {
                 mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "US_REPORT", us)
                 .path("code").asInt());
     }
+
+    @Test
+    void dischargeAndEndoscopyAccepted() throws Exception {
+        var discharge = new org.springframework.mock.web.MockMultipartFile(
+                "file", "sample.discharge.txt", "text/plain",
+                ReportTestSupport.golden("discharge-basic.discharge.txt")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var endo = new org.springframework.mock.web.MockMultipartFile(
+                "file", "sample.endo.txt", "text/plain",
+                ReportTestSupport.golden("endoscopy-basic.endo.txt")
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(200, ReportTestSupport.create(
+                mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "DISCHARGE_SUMMARY", discharge)
+                .path("code").asInt());
+        assertEquals(200, ReportTestSupport.create(
+                mvc, ReportTestSupport.uniq("acc"), ReportTestSupport.uniq("k"), "ENDOSCOPY_REPORT", endo)
+                .path("code").asInt());
+    }
 }

@@ -15,7 +15,9 @@ import com.moonligh.report.domain.parse.ParserRegistry;
 import com.moonligh.report.domain.parse.ReportParser;
 import com.moonligh.report.domain.parse.ReportType;
 import com.moonligh.report.infrastructure.parser.CheckupBookTextParser;
+import com.moonligh.report.infrastructure.parser.DischargeSummaryTextParser;
 import com.moonligh.report.infrastructure.parser.EcgReportTextParser;
+import com.moonligh.report.infrastructure.parser.EndoscopyReportTextParser;
 import com.moonligh.report.infrastructure.parser.LabPanelTextParser;
 import com.moonligh.report.infrastructure.parser.UsReportTextParser;
 
@@ -32,12 +34,14 @@ class NoDualEngineTest {
 
     @Test
     void oneParserPerSupportedType() {
-        assertEquals(4, parsers.size());
-        assertEquals(4, registry.size());
+        assertEquals(6, parsers.size());
+        assertEquals(6, registry.size());
         assertTrue(parsers.stream().anyMatch(p -> p instanceof LabPanelTextParser));
         assertTrue(parsers.stream().anyMatch(p -> p instanceof CheckupBookTextParser));
         assertTrue(parsers.stream().anyMatch(p -> p instanceof EcgReportTextParser));
         assertTrue(parsers.stream().anyMatch(p -> p instanceof UsReportTextParser));
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof DischargeSummaryTextParser));
+        assertTrue(parsers.stream().anyMatch(p -> p instanceof EndoscopyReportTextParser));
     }
 
     @Test

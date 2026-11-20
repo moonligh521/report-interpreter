@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.moonligh.report.DeliveryTestSupport.SseEvent;
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.common.PayloadJson;
 import com.moonligh.report.domain.archive.ArchiveConsumer;
 import com.moonligh.report.domain.archive.ArchiveDeliveryResult;
@@ -61,9 +61,10 @@ class OutboxIdempotencyTest {
         return jdbc.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE report_id = ?", Integer.class, reportId);
     }
 
-    private static ArchiveOutboxMessage message(String eventId, String reportId) {
-        return new ArchiveOutboxMessage(
-                eventId, ArchiveOutboxManager.SCHEMA_VERSION, reportId, "p-1", 1, "itp_idem", List.of(), "MATCHED");
+    private static ArchiveOutboxMessageV2 message(String eventId, String reportId) {
+        return new ArchiveOutboxMessageV2(
+                eventId, ArchiveOutboxManager.SCHEMA_VERSION, reportId, "p-1", 1, "itp_idem", List.of(), "MATCHED",
+                "LAB_PANEL", List.of(), null);
     }
 
     @Test
@@ -122,7 +123,7 @@ class OutboxIdempotencyTest {
     @Test
     void consumingTheSameEventTwiceAppliesOnce() {
         String reportId = ReportTestSupport.uniq("rpt-idem-c");
-        ArchiveOutboxMessage msg = message("arc_" + ReportTestSupport.uniq("c"), reportId);
+        ArchiveOutboxMessageV2 msg = message("arc_" + ReportTestSupport.uniq("c"), reportId);
 
         assertEquals(ArchiveConsumer.Outcome.APPLIED, consumer.consume(msg));
         assertEquals(ArchiveConsumer.Outcome.DUPLICATE, consumer.consume(msg));
@@ -140,7 +141,7 @@ class OutboxIdempotencyTest {
         InterpretationTestSupport.trigger(mvc, account, reportId);
         String payloadJson = jdbc.queryForObject(
                 "SELECT payload_json FROM report_archive_outbox WHERE report_id = ?", String.class, reportId);
-        ArchiveOutboxMessage msg = PayloadJson.read(payloadJson, ArchiveOutboxMessage.class);
+        ArchiveOutboxMessageV2 msg = PayloadJson.read(payloadJson, ArchiveOutboxMessageV2.class);
         // 消费方先收到一次（例如上次 ACK 丢失），随后 Outbox 再投递：仍然 SUCCESS，档案只有一条。
         assertEquals(ArchiveConsumer.Outcome.APPLIED, consumer.consume(msg));
         String outboxId = jdbc.queryForObject(
@@ -159,7 +160,7 @@ class OutboxIdempotencyTest {
         InterpretationTestSupport.trigger(mvc, account, reportId);
         String outboxId = jdbc.queryForObject(
                 "SELECT outbox_id FROM report_archive_outbox WHERE report_id = ?", String.class, reportId);
-        List<ArchiveOutboxMessage> sent = new ArrayList<>();
+        List<ArchiveOutboxMessageV2> sent = new ArrayList<>();
         ArchiveSender recording = m -> {
             sent.add(m);
             return ArchiveDeliveryResult.ok();

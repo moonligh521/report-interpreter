@@ -1,12 +1,12 @@
 package com.moonligh.report.domain.archive;
 
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.domain.rule.IdentityStatus;
 import com.moonligh.report.infrastructure.persistence.ReportArchiveRecordRow;
 
 /**
- * 档案消费方：按 eventId 幂等落地「可投递档案」记录。
- * 防御性再校验身份：非 MATCHED 的消息即使被误投也不落地。
+ * 档案消费方：按 eventId 幂等落地「可投递档案」记录（T-R4 schemaVersion=2 同样按 eventId 幂等）。
+ * 防御性再校验身份：非 MATCHED 的消息即使被误投也不落地（T-R5）。
  */
 public final class ArchiveConsumer {
 
@@ -25,7 +25,7 @@ public final class ArchiveConsumer {
         this.records = records;
     }
 
-    public Outcome consume(ArchiveOutboxMessage message) {
+    public Outcome consume(ArchiveOutboxMessageV2 message) {
         if (!IdentityStatus.MATCHED.name().equals(message.identityStatus())) {
             return Outcome.REJECTED;
         }
@@ -36,7 +36,7 @@ public final class ArchiveConsumer {
     }
 
     /** 作为投递通道使用：APPLIED / DUPLICATE 均视为已接受。 */
-    public ArchiveDeliveryResult deliver(ArchiveOutboxMessage message) {
+    public ArchiveDeliveryResult deliver(ArchiveOutboxMessageV2 message) {
         return switch (consume(message)) {
             case APPLIED, DUPLICATE -> ArchiveDeliveryResult.ok();
             case REJECTED -> ArchiveDeliveryResult.failed(ArchiveOutboxManager.ERR_IDENTITY);

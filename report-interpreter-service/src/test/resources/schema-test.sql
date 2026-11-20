@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS report_parse_result (
   status            VARCHAR(32)   NOT NULL,
   request_key       VARCHAR(64),
   structure_json    CLOB,
+  specimen_time     TIMESTAMP(3),
   created_at        TIMESTAMP(3)  NOT NULL,
   updated_at        TIMESTAMP(3)  NOT NULL,
   CONSTRAINT uk_parse_report_version UNIQUE (report_id, parse_version),

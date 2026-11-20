@@ -9,22 +9,27 @@ import org.springframework.util.StringUtils;
 
 import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
-import com.moonligh.report.api.msg.ArchiveOutboxMessage;
+import com.moonligh.report.api.msg.ArchiveOutboxMessageV2;
 import com.moonligh.report.api.req.CompensateReq;
+import com.moonligh.report.api.res.ArchiveOutboxRes;
 import com.moonligh.report.api.res.CompensateRes;
+import com.moonligh.report.api.res.IndicatorDto;
+import com.moonligh.report.api.res.SectionDto;
+import com.moonligh.report.common.PayloadJson;
 import com.moonligh.report.domain.archive.ArchiveGate;
 import com.moonligh.report.domain.archive.ArchiveOutboxManager;
 import com.moonligh.report.domain.archive.ArchiveSender;
 import com.moonligh.report.domain.job.ReportJobStore;
 import com.moonligh.report.domain.parse.ReportParseStore;
 import com.moonligh.report.domain.rule.IdentityStatus;
+import com.moonligh.report.infrastructure.archive.FhirHintFactory;
 import com.moonligh.report.infrastructure.persistence.ReportArchiveOutboxRow;
 import com.moonligh.report.infrastructure.persistence.ReportJobRow;
 import com.moonligh.report.infrastructure.persistence.ReportParseResultRow;
 
 /**
- * 档案 Outbox 的事务边界：解读完成时同事务入队、派发、补偿。
- * 与危急通知 Outbox（CriticalNotificationService）完全独立。
+ * 档案 Outbox 的事务边界：解读完成时同事务入队、派发、补偿、内部查询。
+ * 与危急通知 Outbox（CriticalNotificationService）完全独立。schemaVersion=2。
  */
 @Service
 public class ArchiveOutboxService {
@@ -59,15 +64,33 @@ public class ArchiveOutboxService {
         if (decision != ArchiveGate.Decision.ALLOWED) {
             return Optional.empty();
         }
-        ArchiveOutboxMessage message = new ArchiveOutboxMessage(
+        List<IndicatorDto> indicators = assembler.forParse(parse.id());
+        List<SectionDto> sections = StructureJson.read(parse.structureJson()).sections();
+        if (sections == null) {
+            sections = List.of();
+        }
+        ArchiveOutboxMessageV2 message = new ArchiveOutboxMessageV2(
                 eventIdOf(interpretationId), ArchiveOutboxManager.SCHEMA_VERSION, job.reportId(), job.patientId(),
-                parse.parseVersion(), interpretationId, assembler.forParse(parse.id()), identityStatus);
+                parse.parseVersion(), interpretationId, indicators, identityStatus,
+                parse.reportType(), sections, FhirHintFactory.forIndicators(indicators));
         return Optional.of(manager.enqueue(message));
     }
 
     /** 档案事件 ID：由解读 ID 稳定派生。 */
     public static String eventIdOf(String interpretationId) {
         return "arc_" + interpretationId;
+    }
+
+    @Transactional(readOnly = true)
+    public ArchiveOutboxRes getOutbox(String outboxId) {
+        if (!StringUtils.hasText(outboxId)) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "outboxId 不能为空");
+        }
+        ReportArchiveOutboxRow row = manager.require(outboxId.strip());
+        ArchiveOutboxMessageV2 payload = PayloadJson.read(row.payloadJson(), ArchiveOutboxMessageV2.class);
+        return new ArchiveOutboxRes(
+                row.outboxId(), row.reportId(), row.eventId(), row.schemaVersion(), row.status(),
+                row.attemptCount(), row.lastErrorCode(), payload);
     }
 
     /** 以默认通道派发到期（PENDING / FAILED）档案。 */

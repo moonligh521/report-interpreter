@@ -90,4 +90,4 @@ AC-T1～T9 + **AC-T10** 无 Map。
 
 ## 7. 完成定义
 
-- [ ] SDD；TDD+AC；`release-V0.3-*` → `master` → `V0.3.0`  
+- [x] SDD；TDD+AC；`release-V0.3-*` → `master` → `V0.3.0`（`mvn -B verify` **297** 测全绿）  
