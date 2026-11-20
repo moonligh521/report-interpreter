@@ -92,9 +92,9 @@ P0～P2 技术线已闭环，但合法 PDF/图片上传后仅建单为 `CREATED`
 
 ## 9. 完成定义
 
-- [ ] SDD（本文）评审通过并据此写出实施计划  
+- [x] SDD（本文）评审通过并据此写出实施计划（`docs/superpowers/plans/feature-V1.0-20261120-real-parse.md`）  
 - [ ] TDD+AC（RP-1～RP-6）与 `mvn -B verify` 全绿  
-- [ ] 合入 `feature-V1.0-*` → `release-V1.0-*` → `master`（标签策略在实施计划中与临床放行里程碑对齐，本分支可先合版本线）
+- [ ] 合入 `feature-V1.0-*`（本分支完成定义）；临床总标签 `V1.0.0` 留给后续 shadow-gate
 
 ## 10. 后续临床放行（非本分支）
 
