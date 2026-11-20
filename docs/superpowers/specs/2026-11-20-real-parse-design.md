@@ -238,7 +238,7 @@ DocumentParseManifest
 
 - [x] 本文终冻（平衡修订获确认）  
 - [x] 计划与本文顺序一致  
-- [ ] RP-1～RP-8 + `mvn -B verify` 全绿  
+- [x] RP-1～RP-8 + `mvn -B verify` 全绿（327）  
 - [ ] 合入 `feature-V1.0-20261120`；**不**宣称临床放行；`V1.0.0` 留给 shadow-gate  
 
 ## 14. 后续临床放行

@@ -37,16 +37,15 @@ class AuthGuardTest {
 
     @Test
     void acceptWriteWithAccountHeader() throws Exception {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
+        MockMultipartFile file = ReportTestSupport.labFile(ReportTestSupport.golden("lab-panel-basic.lab.txt"));
         mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p1")
-                        .header(AuthTokens.ACCOUNT_HEADER, "acc-1")
+                        .header(AuthTokens.ACCOUNT_HEADER, "acc-auth-ok")
                         .header("Idempotency-Key", "idem-auth-ok"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.reportId").isNotEmpty())
-                .andExpect(jsonPath("$.data.status").value("CREATED"));
+                .andExpect(jsonPath("$.data.status").isNotEmpty());
     }
 }

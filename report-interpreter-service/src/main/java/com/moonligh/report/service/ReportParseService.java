@@ -228,7 +228,9 @@ public class ReportParseService {
             throw ex;
         }
         QualityVerdict quality = ParseQualityGate.evaluate(result);
-        int failedPages = result.meta().failedPages().size();
+        int failedPages = result.meta().parseFailedPages().isEmpty()
+                ? result.meta().failedPages().size()
+                : result.meta().parseFailedPages().size();
         int totalPages = result.meta().totalPages() == null
                 ? Math.max(failedPages, 1)
                 : result.meta().totalPages();

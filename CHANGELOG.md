@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- real-parse：`DocumentExtractionPort` + 版本化 `ExtractedDocument`；`PdfTextLayerProbe` / `NativePdfParser` / `OcrLayoutParser`（整份单路）。
+- Fake（默认）与 Http（可配）抽取适配器；页/文档质量门禁；`report_parse_manifest`；仅 PASSED 可 active 并同事务跑规则。
+- RP-1～RP-8 验收；损坏 PDF/图片不再静默 `CREATED`（对外 4102）。
+
+### Notes
+
+- 本变更仅为 **真实文档解析工程闭环**，不等于临床放行；不打 `V1.0.0` 临床总标签。
+
 ## [0.3.0] - 2026-11-19
 
 ### Added

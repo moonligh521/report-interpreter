@@ -58,13 +58,12 @@ class CoverageUnknownSafeBanTest {
     }
 
     @Test
-    void unparsedReportIsNeverSafe() throws Exception {
+    void corruptPdfIsNotSilentCreatedAndNotSafe() throws Exception {
         String account = ReportTestSupport.uniq("acc-unparsed");
         var file = new org.springframework.mock.web.MockMultipartFile(
                 "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
         JsonNode created = ReportTestSupport.create(mvc, account, ReportTestSupport.uniq("k"), "LAB_PANEL", file);
-        JsonNode detail = ReportTestSupport.detail(mvc, account, created.path("data").path("reportId").asText());
-        assertFalse(detail.path("data").path("safeNormalAllowed").asBoolean());
-        assertTrue(detail.path("data").path("archiveBlocked").asBoolean());
+        // real-parse：损坏 PDF 不得静默 CREATED，对外 4102。
+        assertEquals(ErrorCode.REPORT_PARSE_FAILED.getCode(), created.path("code").asInt());
     }
 }

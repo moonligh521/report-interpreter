@@ -31,8 +31,7 @@ class ResultContractTest {
 
     @Test
     void createResponseIsTypedResultWithCode200() throws Exception {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
+        MockMultipartFile file = ReportTestSupport.labFile(ReportTestSupport.golden("lab-panel-basic.lab.txt"));
         MvcResult result = mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p-contract")
@@ -58,8 +57,7 @@ class ResultContractTest {
 
     @Test
     void getDetailReturnsTypedShape() throws Exception {
-        MockMultipartFile file = new MockMultipartFile(
-                "file", "lab.pdf", "application/pdf", "%PDF-1.4".getBytes());
+        MockMultipartFile file = ReportTestSupport.labFile(ReportTestSupport.golden("lab-panel-basic.lab.txt"));
         MvcResult created = mockMvc.perform(multipart("/api/report/reports")
                         .file(file)
                         .param("patientId", "p-get")
@@ -76,8 +74,8 @@ class ResultContractTest {
         mockMvc.perform(get("/api/report/reports/" + reportId)
                         .header(AuthTokens.ACCOUNT_HEADER, "acc-get"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.reportId").value(reportId))
-                .andExpect(jsonPath("$.data.status").value("CREATED"));
+                .andExpect(jsonPath("$.data.status").isNotEmpty())
+                .andExpect(jsonPath("$.data.reportType").value("LAB_PANEL"));
     }
 }

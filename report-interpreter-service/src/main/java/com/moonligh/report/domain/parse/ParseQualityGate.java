@@ -7,13 +7,11 @@ import com.moonligh.consult.framework.BusinessException;
 import com.moonligh.consult.framework.ErrorCode;
 
 /**
- * 质量门禁：证据完整性优先，置信度为辅；页级状态汇总为文档级。
- * 任一关键 FAILED 页 → 文档不得 PASSED；LOW_CONFIDENCE → NEED_MANUAL_REVIEW。
+ * 质量门禁：证据完整性优先，置信度为辅；页级解析失败状态汇总为文档级。
+ * 任一 parseFailed 页 → 文档不得 PASSED；LOW_CONFIDENCE → NEED_MANUAL_REVIEW。
+ * 注意：ReportMeta.failedPages 仍留给 CriticalCoverage，不在此当作解析硬失败。
  */
 public final class ParseQualityGate {
-
-    /** 文档整体置信度低于此值时倾向人工复核（辅条件）。 */
-    static final double LOW_CONFIDENCE_THRESHOLD = 0.55;
 
     private ParseQualityGate() {
     }
@@ -39,10 +37,10 @@ public final class ParseQualityGate {
         boolean hasStructure = result.structure() != null && !result.structure().isEmpty();
         ReportMeta meta = result.meta() == null ? ReportMeta.EMPTY : result.meta();
 
-        if (!meta.failedPages().isEmpty()) {
+        if (!meta.parseFailedPages().isEmpty()) {
             issues.add(new QualityIssue(
-                    "FAILED_PAGES",
-                    "存在失败页: " + meta.failedPages()));
+                    "PARSE_FAILED_PAGES",
+                    "存在解析失败页: " + meta.parseFailedPages()));
         }
         if (!meta.lowConfidencePages().isEmpty()) {
             issues.add(new QualityIssue(
@@ -66,32 +64,20 @@ public final class ParseQualityGate {
 
         boolean evidenceBroken = issues.stream().anyMatch(i ->
                 "MISSING_EVIDENCE".equals(i.code()) || "MISSING_RAW_FIELDS".equals(i.code()));
-        boolean hasFailedPages = !meta.failedPages().isEmpty();
+        boolean hasParseFailedPages = !meta.parseFailedPages().isEmpty();
         boolean hasLowConfPages = !meta.lowConfidencePages().isEmpty();
 
         if (!hasIndicators && !hasStructure) {
-            // 有失败页时仍视为 FAILED（不得因「无指标」假装通过）。
             issues.add(new QualityIssue("NO_CONTENT", "未解析出任何指标或结构内容"));
             return new QualityVerdict(DocumentQualityStatus.FAILED, issues);
         }
 
-        if (evidenceBroken || hasFailedPages) {
-            // 证据不全或关键页失败：不得 PASSED；失败页优先 FAILED。
-            DocumentQualityStatus status = hasFailedPages || evidenceBroken
-                    ? DocumentQualityStatus.FAILED
-                    : DocumentQualityStatus.NEED_MANUAL_REVIEW;
-            if (hasFailedPages) {
-                status = DocumentQualityStatus.FAILED;
-            }
-            return new QualityVerdict(status, issues);
+        if (evidenceBroken || hasParseFailedPages) {
+            return new QualityVerdict(DocumentQualityStatus.FAILED, issues);
         }
 
-        if (hasLowConfPages || result.parseConfidence() < LOW_CONFIDENCE_THRESHOLD) {
-            if (result.parseConfidence() < LOW_CONFIDENCE_THRESHOLD) {
-                issues.add(new QualityIssue(
-                        "LOW_PARSE_CONFIDENCE",
-                        "整体置信度过低: " + result.parseConfidence()));
-            }
+        // 页级 LOW_CONFIDENCE → 文档 NEED_MANUAL_REVIEW；字段级低置信留给规则层（如适用性 UNKNOWN）。
+        if (hasLowConfPages) {
             return new QualityVerdict(DocumentQualityStatus.NEED_MANUAL_REVIEW, issues);
         }
 

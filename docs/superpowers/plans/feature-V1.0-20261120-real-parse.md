@@ -39,65 +39,65 @@
 
 **Produces:** `ExtractedDocument(totalPages, pages, ocrConfidence, layoutConfidence, schemaVersion)`；`ExtractedPage(..., PageParseStatus status)`；`ExtractedBlock`；`ExtractedTable`；`DocumentExtractionPort`。
 
-- [ ] 写契约单测（序列化往返、禁 Map、schemaVersion 必填）
-- [ ] 实现 record + port 接口
-- [ ] Commit: `feat: 冻结 ExtractedDocument 抽取契约`
+- [x] 写契约单测（序列化往返、禁 Map、schemaVersion 必填）
+- [x] 实现 record + port 接口
+- [x] Commit: `feat: 冻结 ExtractedDocument 抽取契约`
 
 ### Task 2: PdfTextLayerProbe + NativePdfParser
 
 **Produces:** `ProbeReport(decision, metrics..., reasons)`；Native 仅 `USE_NATIVE`。
 
-- [ ] 金标：合格文本 PDF → USE_NATIVE + 指标证据；乱码/过稀 → USE_OCR 或 NEED_REVIEW（按默认阈值）
-- [ ] 实现探针（配置默认阈值）+ NativePdfParser
-- [ ] Commit: `feat: 实现文本层探针与 NativePdfParser`
+- [x] 金标：合格文本 PDF → USE_NATIVE + 指标证据；乱码/过稀 → USE_OCR 或 NEED_REVIEW（按默认阈值）
+- [x] 实现探针（配置默认阈值）+ NativePdfParser
+- [x] Commit: `feat: 实现文本层探针与 NativePdfParser`
 
 ### Task 3: FakeDocumentExtractionAdapter
 
-- [ ] Fake 对扫描夹具返回稳定 ExtractedDocument（含页状态）
-- [ ] 未知/损坏输入 → 抽取失败（供门禁测）
-- [ ] Commit: `feat: 增加 Fake DocumentExtraction 适配器`
+- [x] Fake 对扫描夹具返回稳定 ExtractedDocument（含页状态）
+- [x] 未知/损坏输入 → 抽取失败（供门禁测）
+- [x] Commit: `feat: 增加 Fake DocumentExtraction 适配器`
 
 ### Task 4: OcrLayoutParser + Structurer
 
-- [ ] 图片或 USE_OCR 的 PDF → 端口 → ParseResult
-- [ ] 与 Native supports 互斥（同 context 至多一个 true）
-- [ ] Commit: `feat: 实现 OcrLayoutParser 与结构化`
+- [x] 图片或 USE_OCR 的 PDF → 端口 → ParseResult
+- [x] 与 Native supports 互斥（同 context 至多一个 true）
+- [x] Commit: `feat: 实现 OcrLayoutParser 与结构化`
 
 ### Task 5: 页级/文档级 ParseQualityGate
 
-- [ ] 证据完整性优先；置信度辅
-- [ ] 任一关键 FAILED 页 → 文档不得 PASSED
-- [ ] LOW_CONFIDENCE → NEED_MANUAL_REVIEW
-- [ ] Commit: `feat: 强化页级与文档级解析质量门禁`
+- [x] 证据完整性优先；置信度辅
+- [x] 任一关键 FAILED 页 → 文档不得 PASSED
+- [x] LOW_CONFIDENCE → NEED_MANUAL_REVIEW
+- [x] Commit: `feat: 强化页级与文档级解析质量门禁`
 
 ### Task 6: Manifest + active 事务边界
 
-- [ ] 表 `report_parse_manifest`（或并列行）+ Mapper XML
-- [ ] 仅 PASSED 落 active 并跑规则；失败写 Manifest + failureStage
-- [ ] 幂等/版本唯一/行锁防覆盖；artifactRef 可空
-- [ ] Commit: `feat: 增加 DocumentParseManifest 与 active 事务边界`
+- [x] 表 `report_parse_manifest`（或并列行）+ Mapper XML
+- [x] 仅 PASSED 落 active 并跑规则；失败写 Manifest + failureStage
+- [x] 幂等/版本唯一/行锁防覆盖；artifactRef 可空
+- [x] Commit: `feat: 增加 DocumentParseManifest 与 active 事务边界`
 
 ### Task 7: HttpDocumentExtractionAdapter
 
-- [ ] 契约字段：requestId、documentHash、schemaVersion、engineVersion、processingStatus、errorCode…
-- [ ] WireMock：200 / 5xx / 超时 / 坏 JSON
-- [ ] 超时与体积极限配置
-- [ ] Commit: `feat: 增加 HTTP DocumentExtraction 适配器`
+- [x] 契约字段：requestId、documentHash、schemaVersion、engineVersion、processingStatus、errorCode…
+- [x] WireMock：200 / 5xx / 超时 / 坏 JSON
+- [x] 超时与体积极限配置
+- [x] Commit: `feat: 增加 HTTP DocumentExtraction 适配器`
 
 ### Task 8: 全量回归
 
-- [ ] RP-1～RP-8 命名测试齐
-- [ ] `mvn -B verify` 全绿
-- [ ] 更新 `docs/工程/分支与版本.md`、CHANGELOG Unreleased
+- [x] RP-1～RP-8 命名测试齐
+- [x] `mvn -B verify` 全绿
+- [x] 更新 `docs/工程/分支与版本.md`、CHANGELOG Unreleased
 - [ ] 合入 `feature-V1.0-20261120` 并推送
-- [ ] Commit: `test: real-parse 回归与文档状态`
+- [x] Commit: `test: real-parse 回归与文档状态`
 
 ---
 
 ## 完成定义
 
-- [ ] 规格终冻确认  
-- [ ] Task 1～8 完成；verify 绿  
+- [x] 规格终冻确认  
+- [x] Task 1～8 完成；verify 绿（327）  
 - [ ] 合入版本线；不打临床总标签 `V1.0.0`
 
 ## Spec coverage

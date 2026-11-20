@@ -22,9 +22,9 @@ import com.moonligh.report.domain.parse.ReportType;
 class ParseQualityGatePageTest {
 
     @Test
-    void anyFailedPagePreventsPassed() {
+    void anyParseFailedPagePreventsPassed() {
         ParsedIndicator ind = okIndicator();
-        ReportMeta meta = new ReportMeta(null, 2, List.of(1), List.of(), null, List.of());
+        ReportMeta meta = new ReportMeta(null, 2, List.of(), List.of(), null, List.of(), List.of(1));
         QualityVerdict v = ParseQualityGate.evaluate(
                 new ParseResult(ReportType.LAB_PANEL, List.of(ind), 0.95, meta));
         assertEquals(DocumentQualityStatus.FAILED, v.status());
@@ -32,9 +32,19 @@ class ParseQualityGatePageTest {
     }
 
     @Test
+    void coverageFailedPagesAloneDoNotFailParseGate() {
+        ParsedIndicator ind = okIndicator();
+        // 文本夹具 FAILED_PAGES 只进 CriticalCoverage，不在此硬失败。
+        ReportMeta meta = new ReportMeta(null, 2, List.of(1), List.of(), null);
+        QualityVerdict v = ParseQualityGate.evaluate(
+                new ParseResult(ReportType.LAB_PANEL, List.of(ind), 0.95, meta));
+        assertEquals(DocumentQualityStatus.PASSED, v.status());
+    }
+
+    @Test
     void lowConfidencePageNeedsManualReview() {
         ParsedIndicator ind = okIndicator();
-        ReportMeta meta = new ReportMeta(null, 1, List.of(), List.of(), null, List.of(0));
+        ReportMeta meta = new ReportMeta(null, 1, List.of(), List.of(), null, List.of(0), List.of());
         QualityVerdict v = ParseQualityGate.evaluate(
                 new ParseResult(ReportType.LAB_PANEL, List.of(ind), 0.90, meta));
         assertEquals(DocumentQualityStatus.NEED_MANUAL_REVIEW, v.status());
