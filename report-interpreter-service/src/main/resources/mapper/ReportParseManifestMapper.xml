@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.moonligh.report.infrastructure.persistence.ReportParseManifestMapper">
+
+    <sql id="cols">
+        id, report_id AS reportId, document_hash AS documentHash, parse_version AS parseVersion,
+        parser_type AS parserType, parser_version AS parserVersion,
+        extraction_engine AS extractionEngine, extraction_engine_version AS extractionEngineVersion,
+        extraction_schema_version AS extractionSchemaVersion,
+        total_page_count AS totalPageCount, successful_page_count AS successfulPageCount,
+        failed_page_count AS failedPageCount, quality_status AS qualityStatus,
+        quality_issues_json AS qualityIssuesJson,
+        extracted_artifact_ref AS extractedArtifactRef, structured_artifact_ref AS structuredArtifactRef,
+        probe_decision AS probeDecision, probe_reasons_json AS probeReasonsJson,
+        failure_stage AS failureStage, detail_code AS detailCode, created_at AS createdAt
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO report_parse_manifest
+        (id, report_id, document_hash, parse_version, parser_type, parser_version,
+         extraction_engine, extraction_engine_version, extraction_schema_version,
+         total_page_count, successful_page_count, failed_page_count, quality_status,
+         quality_issues_json, extracted_artifact_ref, structured_artifact_ref,
+         probe_decision, probe_reasons_json, failure_stage, detail_code, created_at)
+        VALUES
+        (#{id}, #{reportId}, #{documentHash}, #{parseVersion}, #{parserType}, #{parserVersion},
+         #{extractionEngine}, #{extractionEngineVersion}, #{extractionSchemaVersion},
+         #{totalPageCount}, #{successfulPageCount}, #{failedPageCount}, #{qualityStatus},
+         #{qualityIssuesJson}, #{extractedArtifactRef}, #{structuredArtifactRef},
+         #{probeDecision}, #{probeReasonsJson}, #{failureStage}, #{detailCode}, CURRENT_TIMESTAMP(3))
+    </insert>
+
+    <select id="findByReportVersion" resultType="com.moonligh.report.infrastructure.persistence.ReportParseManifestRow">
+        SELECT <include refid="cols"/>
+        FROM report_parse_manifest
+        WHERE report_id = #{reportId} AND parse_version = #{parseVersion}
+    </select>
+
+</mapper>

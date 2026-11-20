@@ -29,11 +29,15 @@ import com.moonligh.report.api.res.ReportDetailRes;
 import com.moonligh.report.api.res.SourceEvidence;
 import com.moonligh.report.config.ReportProperties;
 import com.moonligh.report.domain.job.ReportJobStore;
+import com.moonligh.report.domain.parse.DocumentQualityStatus;
 import com.moonligh.report.domain.parse.ParseContext;
 import com.moonligh.report.domain.parse.ParseQualityGate;
 import com.moonligh.report.domain.parse.ParseResult;
 import com.moonligh.report.domain.parse.ParsedIndicator;
 import com.moonligh.report.domain.parse.ParserRegistry;
+import com.moonligh.report.domain.parse.ExtractedDocument;
+import com.moonligh.report.domain.parse.ProbeReport;
+import com.moonligh.report.domain.parse.QualityVerdict;
 import com.moonligh.report.domain.parse.ReportParseStore;
 import com.moonligh.report.domain.parse.ReportParser;
 import com.moonligh.report.domain.parse.ReportType;
@@ -41,6 +45,9 @@ import com.moonligh.report.domain.parse.UploadGuard;
 import com.moonligh.report.domain.rule.IdentifiedIndicator;
 import com.moonligh.report.domain.rule.IdentityStatus;
 import com.moonligh.report.domain.rule.SafetyVerdict;
+import com.moonligh.report.infrastructure.extraction.FakeDocumentExtractionAdapter;
+import com.moonligh.report.infrastructure.parser.NativePdfParser;
+import com.moonligh.report.infrastructure.parser.OcrLayoutParser;
 import com.moonligh.report.infrastructure.persistence.ReportIndicatorRow;
 import com.moonligh.report.infrastructure.persistence.ReportJobRow;
 import com.moonligh.report.infrastructure.persistence.ReportParseResultRow;
@@ -54,6 +61,7 @@ public class ReportParseService {
 
     static final String STATUS_CREATED = "CREATED";
     static final String STATUS_PARSED = "PARSED";
+    static final String STATUS_NEED_MANUAL_REVIEW = "NEED_MANUAL_REVIEW";
     private static final String UNKNOWN_TYPE = "UNKNOWN";
     private static final int MAX_NAME_LENGTH = 128;
 
@@ -63,17 +71,19 @@ public class ReportParseService {
     private final ReportProperties properties;
     private final ReportRuleService rules;
     private final IndicatorDtoAssembler assembler;
+    private final ParseManifestRecorder manifests;
     private final ObjectMapper json = new ObjectMapper();
 
     public ReportParseService(
             ReportJobStore jobs, ReportParseStore parses, ParserRegistry registry, ReportProperties properties,
-            ReportRuleService rules, IndicatorDtoAssembler assembler) {
+            ReportRuleService rules, IndicatorDtoAssembler assembler, ParseManifestRecorder manifests) {
         this.assembler = assembler;
         this.jobs = jobs;
         this.parses = parses;
         this.registry = registry;
         this.properties = properties;
         this.rules = rules;
+        this.manifests = manifests;
     }
 
     @Transactional
@@ -108,11 +118,18 @@ public class ReportParseService {
         ParseContext ctx = new ParseContext(reportId, type, file.fileName(), file.contentType(), file.content());
         Optional<ReportParser> parser = registry.find(ctx);
         if (parser.isEmpty()) {
-            // 二进制 PDF/图片：P0 尚未接入 OCR 引擎，仅建单。
+            // PDF/图片不得静默停在 CREATED。
+            if (kind == UploadGuard.Kind.PDF || kind == UploadGuard.Kind.IMAGE) {
+                manifests.recordFailureNewTx(manifests.row(
+                        reportId, hash, failureManifestVersion(), "NONE", "0", "", "", "", 0, 0, 0,
+                        DocumentQualityStatus.FAILED, List.of(), null, List.of(),
+                        "ROUTE", "NO_PARSER"));
+                throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "无可用解析器");
+            }
             return new CreateReportRes(reportId, STATUS_CREATED, 0);
         }
-        ParseOutcome outcome = runParse(reportId, ctx, parser.get(), null, expectedName);
-        return new CreateReportRes(reportId, outcome.verdict().status().name(), outcome.version());
+        ParseOutcome outcome = runParse(reportId, ctx, parser.get(), null, expectedName, hash);
+        return new CreateReportRes(reportId, outcome.status(), outcome.version());
     }
 
     @Transactional
@@ -134,8 +151,9 @@ public class ReportParseService {
                 reportId, type, "reparse.lab.txt", "text/plain", job.sourceText().getBytes(StandardCharsets.UTF_8));
         ReportParser parser = registry.find(ctx)
                 .orElseThrow(() -> new BusinessException(ErrorCode.REPORT_PARSE_FAILED, "无可用解析器"));
-        ParseOutcome outcome = runParse(reportId, ctx, parser, idempotencyKey, job.expectedPatientName());
-        return new CreateReportRes(reportId, outcome.verdict().status().name(), outcome.version());
+        String hash = job.requestHash() == null ? "reparse" : job.requestHash();
+        ParseOutcome outcome = runParse(reportId, ctx, parser, idempotencyKey, job.expectedPatientName(), hash);
+        return new CreateReportRes(reportId, outcome.status(), outcome.version());
     }
 
     @Transactional(readOnly = true)
@@ -184,20 +202,63 @@ public class ReportParseService {
 
     // ---- 内部 ----
 
-    /** 解析版本号与规则出口结论。 */
-    private record ParseOutcome(int version, SafetyVerdict verdict) {
+    /** 解析版本号与对外任务状态。 */
+    private record ParseOutcome(int version, String status) {
     }
 
     private ParseOutcome runParse(
-            String reportId, ParseContext ctx, ReportParser parser, String requestKey, String expectedName) {
-        ParseResult result = parser.parse(ctx);
-        ParseQualityGate.check(result);
+            String reportId, ParseContext ctx, ReportParser parser, String requestKey, String expectedName,
+            String documentHash) {
+        ProbeReport probeReport = probeOf(parser, ctx);
+        ParseResult result;
+        try {
+            result = parser.parse(ctx);
+        } catch (BusinessException ex) {
+            manifests.recordFailureNewTx(manifests.row(
+                    reportId, documentHash, failureManifestVersion(),
+                    parserType(parser), parserVersion(parser),
+                    extractionEngine(parser), extractionEngineVersion(parser),
+                    ExtractedDocument.SCHEMA_VERSION,
+                    probeReport == null ? 0 : probeReport.totalPages(), 0,
+                    probeReport == null ? 0 : probeReport.totalPages(),
+                    DocumentQualityStatus.FAILED, List.of(),
+                    probeReport == null ? null : probeReport.decision(),
+                    probeReport == null ? List.of() : probeReport.reasons(),
+                    "EXTRACT_OR_STRUCTURE", String.valueOf(ex.getCode())));
+            throw ex;
+        }
+        QualityVerdict quality = ParseQualityGate.evaluate(result);
+        int failedPages = result.meta().failedPages().size();
+        int totalPages = result.meta().totalPages() == null
+                ? Math.max(failedPages, 1)
+                : result.meta().totalPages();
+        int successPages = Math.max(0, totalPages - failedPages - result.meta().lowConfidencePages().size());
+
+        if (quality.status() == DocumentQualityStatus.FAILED) {
+            manifests.recordFailureNewTx(manifests.row(
+                    reportId, documentHash, failureManifestVersion(),
+                    parserType(parser), parserVersion(parser),
+                    extractionEngine(parser), extractionEngineVersion(parser),
+                    ExtractedDocument.SCHEMA_VERSION,
+                    totalPages, successPages, failedPages,
+                    quality.status(), quality.issues(),
+                    probeReport == null ? null : probeReport.decision(),
+                    probeReport == null ? List.of() : probeReport.reasons(),
+                    "QUALITY_GATE", quality.status().name()));
+            throw new BusinessException(ErrorCode.REPORT_PARSE_FAILED,
+                    quality.issues().isEmpty() ? "质量门禁未通过" : quality.issues().get(0).message());
+        }
+
         int version = parses.maxVersion(reportId) + 1;
-        parses.deactivatePrevious(reportId);
+        boolean activate = quality.passed();
+        if (activate) {
+            parses.deactivatePrevious(reportId);
+        }
         String parseId = "prs_" + UUID.randomUUID().toString().replace("-", "");
+        String parseStatus = activate ? STATUS_PARSED : quality.status().name();
         parses.insertParseResult(new ReportParseResultRow(
-                parseId, reportId, version, true, result.reportType().name(),
-                result.parseConfidence(), STATUS_PARSED, requestKey, StructureJson.write(result.structure()),
+                parseId, reportId, version, activate, result.reportType().name(),
+                result.parseConfidence(), parseStatus, requestKey, StructureJson.write(result.structure()),
                 resolveSpecimenTime(result)));
 
         List<ReportIndicatorRow> rows = new ArrayList<>();
@@ -213,10 +274,85 @@ public class ReportParseService {
         }
         parses.insertIndicators(rows);
         evidences.forEach(parses::insertEvidence);
+
+        manifests.record(manifests.row(
+                reportId, documentHash, version,
+                parserType(parser), parserVersion(parser),
+                extractionEngine(parser), extractionEngineVersion(parser),
+                ExtractedDocument.SCHEMA_VERSION,
+                totalPages, successPages, failedPages,
+                quality.status(), quality.issues(),
+                probeReport == null ? null : probeReport.decision(),
+                probeReport == null ? List.of() : probeReport.reasons(),
+                activate ? "" : "QUALITY_GATE",
+                activate ? "" : quality.status().name()));
+
+        if (!activate) {
+            jobs.updateStatus(reportId, STATUS_NEED_MANUAL_REVIEW);
+            return new ParseOutcome(version, STATUS_NEED_MANUAL_REVIEW);
+        }
+
         jobs.updateStatus(reportId, STATUS_PARSED);
-        // PARSED 之后自动执行规则：身份 / 覆盖 / 参考区间 / 危急，状态推进到规则出口。
         SafetyVerdict verdict = rules.run(reportId, version, result, identified, expectedName);
-        return new ParseOutcome(version, verdict);
+        String status = verdict.status() == null ? STATUS_PARSED : verdict.status().name();
+        return new ParseOutcome(version, status);
+    }
+
+    private static ProbeReport probeOf(ReportParser parser, ParseContext ctx) {
+        if (parser instanceof NativePdfParser nativePdf) {
+            try {
+                return nativePdf.lastProbe(ctx);
+            } catch (RuntimeException e) {
+                return null;
+            }
+        }
+        if (parser instanceof OcrLayoutParser ocr) {
+            try {
+                return ocr.probeIfPdf(ctx);
+            } catch (RuntimeException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static String parserType(ReportParser parser) {
+        if (parser instanceof NativePdfParser) {
+            return NativePdfParser.PARSER_TYPE;
+        }
+        if (parser instanceof OcrLayoutParser) {
+            return OcrLayoutParser.PARSER_TYPE;
+        }
+        return parser.getClass().getSimpleName();
+    }
+
+    private static String parserVersion(ReportParser parser) {
+        if (parser instanceof NativePdfParser) {
+            return NativePdfParser.PARSER_VERSION;
+        }
+        if (parser instanceof OcrLayoutParser) {
+            return OcrLayoutParser.PARSER_VERSION;
+        }
+        return "1.0.0";
+    }
+
+    private static String extractionEngine(ReportParser parser) {
+        if (parser instanceof OcrLayoutParser) {
+            return FakeDocumentExtractionAdapter.ENGINE;
+        }
+        return "";
+    }
+
+    private static String extractionEngineVersion(ReportParser parser) {
+        if (parser instanceof OcrLayoutParser) {
+            return FakeDocumentExtractionAdapter.ENGINE_VERSION;
+        }
+        return "";
+    }
+
+    /** 失败 Manifest 使用负版本号，避免与正式 parse_version 唯一约束冲突。 */
+    private static int failureManifestVersion() {
+        return -1 - (int) (Math.abs(UUID.randomUUID().getLeastSignificantBits()) % 1_000_000_000L);
     }
 
     /** 趋势排序时间：优先 meta.specimenTime，否则取指标 reportTime 最早值。 */

@@ -258,3 +258,28 @@ CREATE TABLE IF NOT EXISTS report_archive_record (
   indicator_count    INT          NOT NULL,
   created_at         TIMESTAMP(3) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS report_parse_manifest (
+  id                          VARCHAR(64)   NOT NULL PRIMARY KEY,
+  report_id                   VARCHAR(64)   NOT NULL,
+  document_hash               VARCHAR(64)   NOT NULL,
+  parse_version               INT           NOT NULL,
+  parser_type                 VARCHAR(32)   NOT NULL,
+  parser_version              VARCHAR(32)   NOT NULL,
+  extraction_engine           VARCHAR(64),
+  extraction_engine_version   VARCHAR(32),
+  extraction_schema_version   VARCHAR(32),
+  total_page_count            INT           NOT NULL,
+  successful_page_count       INT           NOT NULL,
+  failed_page_count           INT           NOT NULL,
+  quality_status              VARCHAR(32)   NOT NULL,
+  quality_issues_json         CLOB          NOT NULL,
+  extracted_artifact_ref      VARCHAR(512),
+  structured_artifact_ref     VARCHAR(512),
+  probe_decision              VARCHAR(32),
+  probe_reasons_json          CLOB,
+  failure_stage               VARCHAR(64),
+  detail_code                 VARCHAR(64),
+  created_at                  TIMESTAMP(3)  NOT NULL,
+  CONSTRAINT uk_parse_manifest_version UNIQUE (report_id, parse_version)
+);
