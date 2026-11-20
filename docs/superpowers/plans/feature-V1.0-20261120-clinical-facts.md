@@ -93,8 +93,8 @@
 - [x] CF-1～CF-6 命名测试齐
 - [x] `mvn -B verify` 全绿（自 reactor 根，342）
 - [x] 更新 `docs/工程/分支与版本.md`、CHANGELOG Unreleased；设计 §10 勾选
-- [ ] 合入 `feature-V1.0-20261120` 并推送（不打 V1.0.0）
-- [ ] Commit: `test: clinical-facts 回归与文档状态`
+- [x] 合入 `feature-V1.0-20261120` 并推送（不打 V1.0.0）
+- [x] Commit: `test: clinical-facts 回归与文档状态`
 
 ---
 
@@ -102,7 +102,7 @@
 
 - [x] 规格终冻确认  
 - [x] Task 1～7 完成；verify 绿（342）  
-- [ ] 合入版本线；**不**宣称临床放行  
+- [x] 合入版本线；**不**宣称临床放行  
 
 ## 执行入口
 
